@@ -12,6 +12,7 @@ class Customer extends Model
     protected $fillable = [
         'area_id',
         'name',
+        'location',
         'ip_address',
         'status',
         'last_alerted_at',

@@ -44,6 +44,14 @@ class HealthChecksRelationManager extends RelationManager
                         'down' => 'danger',
                         default => 'gray',
                     }),
+                TextColumn::make('latency_ms')
+                    ->label('Latency')
+                    ->suffix(' ms')
+                    ->sortable(),
+                TextColumn::make('packet_loss')
+                    ->label('Packet Loss')
+                    ->suffix('%')
+                    ->sortable(),
                 TextColumn::make('checked_at')
                     ->label('Time')
                     ->dateTime()

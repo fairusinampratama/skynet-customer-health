@@ -18,6 +18,7 @@ return new class extends Migration {
                 ->cascadeOnDelete();
 
             $table->string('name');
+            $table->string('location')->nullable();
             $table->string('ip_address');
 
             $table->timestamps();

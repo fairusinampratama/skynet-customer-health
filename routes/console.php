@@ -7,4 +7,4 @@ Artisan::command('inspire', function () {
     $this->comment(Inspiring::quote());
 })->purpose('Display an inspiring quote');
 
-\Illuminate\Support\Facades\Schedule::command('health:check')->everyTenMinutes()->withoutOverlapping();
+\Illuminate\Support\Facades\Schedule::command('health:check')->everyMinute()->withoutOverlapping(5);
