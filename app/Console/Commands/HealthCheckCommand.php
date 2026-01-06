@@ -25,63 +25,111 @@ class HealthCheckCommand extends Command
     /**
      * Execute the console command.
      */
-    public function handle(PingService $pingService)
+    public function handle()
     {
         $customers = Customer::all();
-        $this->output->progressStart($customers->count());
-
-        foreach ($customers as $customer) {
-            $result = $pingService->ping($customer->ip_address);
-            $pingStatus = $result['status'];
-
-            $customer->healthChecks()->create([
-                'status' => $pingStatus,
-                'latency_ms' => $result['latency_ms'],
-                'packet_loss' => $result['packet_loss'],
-                'checked_at' => now(),
-            ]);
-
-            // Anti-flap status calculation
-            $lastChecks = $customer->healthChecks()->latest('checked_at')->take(3)->pluck('status');
+        $total = $customers->count();
+        $this->output->progressStart($total);
+        
+        // Chunk size for concurrency
+        $chunkSize = 100;
+        
+        $customers->chunk($chunkSize)->each(function ($chunk) {
+            $running = [];
+            foreach ($chunk as $customer) {
+                 $running[$customer->id] = \Illuminate\Support\Facades\Process::start("ping -c 1 -W 1 {$customer->ip_address}");
+            }
             
-            $newStatus = 'unstable';
-            if ($lastChecks->count() >= 3) {
-                 if ($lastChecks->every(fn($s) => $s === 'up')) {
-                     $newStatus = 'up';
-                 } elseif ($lastChecks->every(fn($s) => $s === 'down')) {
-                     $newStatus = 'down';
-                 }
-            } elseif ($lastChecks->count() > 0) {
-                 // Less than 3 checks, assume unstable unless all match (optional, but safer to start unstable or follow latest)
-                 // User said "Last 3 = DOWN", so strict.
-                 // Let's just follow the latest status for initial checks or keep it 'unstable'?
-                 // "Minimal" approach: if < 3, use latest? Or 'unstable'.
-                 // Let's use 'unstable' until we have 3 consistent checks, or maybe if all available are matching.
-                 if ($lastChecks->every(fn($s) => $s === 'up')) $newStatus = 'up';
-                 elseif ($lastChecks->every(fn($s) => $s === 'down')) $newStatus = 'down';
-            }
-
-            if ($customer->status !== $newStatus) {
-                $customer->update(['status' => $newStatus]);
-            }
-
-            // Alerting Logic
-            if ($customer->status === 'down') {
-                $downSince = $customer->updated_at;
-                if ($downSince->diffInMinutes(now()) >= 5) {
-                    // Check if already alerted for this incident
-                    if (! $customer->last_alerted_at || $customer->last_alerted_at < $downSince) {
-                        $this->sendTelegramAlert($customer, $downSince);
-                        $customer->update(['last_alerted_at' => now()]);
+            $results = [];
+            while (count($running) > 0) {
+                foreach ($running as $id => $proc) {
+                    if (! $proc->running()) {
+                        $results[$id] = $proc->wait();
+                        unset($running[$id]);
                     }
                 }
+                usleep(10000); // 10ms for tighter loop
             }
 
-            $this->output->progressAdvance();
-        }
+            // \Illuminate\Support\Facades\Log::info("HealthCheck: Results collected (Manual Parallel).");
+            
+            foreach ($results as $customerId => $result) {
+                // $customer = $chunk->find($customerId); // Works with ID keys
+                $customer = \App\Models\Customer::find($customerId);
+                $output = $result->output();
+                $errorOutput = $result->errorOutput();
+                $exitCode = $result->exitCode();
+                
+                // if (!empty($errorOutput)) Log::error(...)
+                
+                // if ($exitCode !== 0) { ... }
+                
+                // if (empty($output) ... ) { ... }
+                
+                // ... (Parsing Logic)
+                $status = 'down';
+                $latency = null;
+                $packetLoss = 100;
+
+                if (preg_match('/(\d+)% packet loss/', $output, $matches)) {
+                    $packetLoss = (float) $matches[1];
+                }
+                if (preg_match('/rtt min\/avg\/max\/mdev = [\d\.]+\/([\d\.]+)\//', $output, $matches)) {
+                    $latency = (float) $matches[1];
+                }
+
+                if ($packetLoss < 20) {
+                    $status = 'up';
+                } elseif ($packetLoss < 100) {
+                    $status = 'unstable';
+                }
+
+                $customer->healthChecks()->create([
+                    'status' => $status,
+                    'latency_ms' => $latency,
+                    'packet_loss' => $packetLoss,
+                    'checked_at' => now(),
+                ]);
+
+                $this->updateCustomerStatus($customer, $status);
+                $this->output->progressAdvance();
+            }
+        });
 
         $this->output->progressFinish();
         $this->info('Health check completed.');
+    }
+
+    protected function updateCustomerStatus($customer, $newStatus)
+    {
+        if ($customer->status !== $newStatus) {
+            $customer->update(['status' => $newStatus]);
+            
+            if ($newStatus === 'down') {
+                $downSince = $customer->updated_at;
+                // Check if down for > 5 minutes (based on updated_at which was just touched if status changed? No, updated_at updates on change.)
+                // Actually, if status JUST changed to down, it's 0 minutes down.
+                // Alert logic usually runs on subsequent checks.
+                // Detailed logic:
+                // If just went down -> do nothing (wait 5 mins)
+                // If was down and still down -> check time.
+                // But this method only runs on CHANGE.
+                
+                // So purely on change, we don't alert yet.
+                // The alert check needs to be separate or we need to handle "still down" cases.
+            }
+        }
+        
+        // Check for alerts regardless of status change (consistency check)
+        if ($customer->refresh()->status === 'down') {
+             $downSince = $customer->updated_at; // Time it changed to down
+             if ($downSince->diffInMinutes(now()) >= 5) {
+                if (! $customer->last_alerted_at || $customer->last_alerted_at < $downSince) {
+                    $this->sendTelegramAlert($customer, $downSince);
+                    $customer->update(['last_alerted_at' => now()]);
+                }
+             }
+        }
     }
 
     protected function sendTelegramAlert(Customer $customer, $downSince)

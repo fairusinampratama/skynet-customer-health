@@ -7,6 +7,7 @@ use Filament\Tables\Table;
 use Filament\Widgets\TableWidget as BaseWidget;
 use App\Models\Customer;
 use Filament\Tables\Columns\TextColumn;
+use Illuminate\Database\Eloquent\Builder;
 
 class LatestHealthChecks extends BaseWidget
 {
@@ -23,17 +24,23 @@ class LatestHealthChecks extends BaseWidget
             ->query(
                 \App\Models\Customer::query()
                     ->where('status', 'down')
-                    ->with('latestHealth')
-                    ->take(10)
             )
+            ->defaultSort('updated_at', 'asc') // Default: Longest downtime first
             ->columns([
+                TextColumn::make('index')
+                    ->label('#')
+                    ->rowIndex(),
                 TextColumn::make('name')->label('Customer'),
                 TextColumn::make('status')
                     ->badge()
                     ->color('danger'),
-                TextColumn::make('latestHealth.checked_at')
-                    ->label('Downtime Started')
-                    ->since(),
-            ]);
+                TextColumn::make('updated_at')
+                    ->label('Downtime') // Renamed as requested
+                    ->since()
+                    ->sortable(),
+            ])
+            ->recordUrl(
+                fn (Customer $record): string => \App\Filament\Admin\Resources\Customers\CustomerResource::getUrl('edit', ['record' => $record])
+            );
     }
 }

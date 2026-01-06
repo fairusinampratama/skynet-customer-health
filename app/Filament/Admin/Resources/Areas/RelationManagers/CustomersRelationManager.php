@@ -52,6 +52,9 @@ class CustomersRelationManager extends RelationManager
                         default => 'gray',
                     }),
             ])
+            ->recordUrl(
+                fn ($record): string => \App\Filament\Admin\Resources\Customers\CustomerResource::getUrl('edit', ['record' => $record])
+            )
             ->filters([
                 //
             ])
