@@ -10,10 +10,10 @@
                     />
                 </div>
                 <div>
-                    <h2 class="text-2xl font-bold tracking-tight text-gray-950 dark:text-white">
+                    <h2 class="text-lg sm:text-2xl font-bold tracking-tight text-gray-950 dark:text-white">
                         Area Connectivity
                     </h2>
-                    <p class="text-base text-gray-500 dark:text-gray-400 font-medium max-w-xs truncate">
+                    <p class="text-sm sm:text-base text-gray-500 dark:text-gray-400 font-medium max-w-xs truncate">
                         {{ count($this->areas) }} monitored areas
                     </p>
                 </div>
@@ -125,41 +125,54 @@
                 </div>
 
             @elseif($displayMode === 'card')
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
                     @foreach($this->areas as $area)
                         @php $status = $getHealthStatus($area->health_score); @endphp
                         <a href="{{ route('filament.admin.resources.areas.edit', $area->id) }}" class="flex flex-col h-full relative p-5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm hover:shadow-md hover:border-primary-200 dark:hover:border-primary-900 transition-all duration-300 group">
                             
                             {{-- Top Row --}}
-                            <div class="flex justify-between items-start mb-6">
-                                <div>
-                                    <h3 class="text-2xl font-bold text-gray-900 dark:text-white truncate" title="{{ $area->name }}">
+                            <div class="flex justify-between items-start mb-4 sm:mb-6 gap-2">
+                                <div class="overflow-hidden">
+                                    <h3 class="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white truncate" title="{{ $area->name }}">
                                         {{ $area->name }}
                                     </h3>
-                                    <p class="text-base text-gray-500 dark:text-gray-400 mt-1">
+                                    <p class="text-sm sm:text-base text-gray-500 dark:text-gray-400 mt-1">
                                         {{ $area->total_count }} Hosts
                                     </p>
                                 </div>
-                                <span class="inline-flex items-center rounded-md px-2.5 py-1 text-sm font-bold ring-1 ring-inset {{ $status['badge'] }}">
+                                <span class="inline-flex items-center rounded-md px-2 py-0.5 sm:px-2.5 sm:py-1 text-xs sm:text-sm font-bold ring-1 ring-inset whitespace-nowrap {{ $status['badge'] }}">
                                     {{ $area->health_score }}%
                                 </span>
                             </div>
 
-                            {{-- Stats Row (Balanced Red/Green) --}}
-                            <div class="grid grid-cols-2 gap-4 mb-6">
-                                <div class="flex flex-col p-4 rounded-xl bg-danger-50 dark:bg-danger-900/10 border border-danger-100 dark:border-danger-900/20">
-                                    <span class="text-sm font-bold text-danger-600/80 dark:text-danger-400 uppercase tracking-wider mb-1">Offline</span>
-                                    <span class="text-5xl font-bold {{ $area->down_count > 0 ? 'text-danger-600 dark:text-danger-500' : 'text-gray-400 dark:text-gray-500' }}">
-                                        {{ $area->down_count }}
+                            {{-- Stats Row (Conditional) --}}
+                            @if($area->down_count > 0)
+                                {{-- SCENARIO B: Issues Detected (Split View) --}}
+                                <div class="grid grid-cols-2 gap-3 sm:gap-4 mb-4 sm:mb-6">
+                                    <div class="flex flex-col p-3 sm:p-4 rounded-xl bg-danger-50 dark:bg-danger-900/10 border border-danger-100 dark:border-danger-900/20">
+                                        <span class="text-xs sm:text-sm font-bold text-danger-600/80 dark:text-danger-400 uppercase tracking-wider mb-1">Offline</span>
+                                        <span class="font-bold text-danger-600 dark:text-danger-500 {{ strlen($area->down_count) > 2 ? 'text-2xl sm:text-4xl' : 'text-3xl sm:text-5xl' }}">
+                                            {{ $area->down_count }}
+                                        </span>
+                                    </div>
+                                    <div class="flex flex-col p-3 sm:p-4 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700 text-right opacity-75">
+                                        <span class="text-xs sm:text-sm font-bold text-gray-500/80 dark:text-gray-400 uppercase tracking-wider mb-1">Online</span>
+                                        <span class="font-bold text-gray-600 dark:text-gray-400 {{ strlen($area->up_count) > 2 ? 'text-2xl sm:text-4xl' : 'text-3xl sm:text-5xl' }}">
+                                            {{ $area->up_count }}
+                                        </span>
+                                    </div>
+                                </div>
+                            @else
+                                {{-- SCENARIO A: All Good (Unified View) --}}
+                                <div class="flex-1 flex flex-col items-center justify-center py-4 mb-4 sm:mb-6 border-y border-dashed border-success-200 dark:border-success-900/30 bg-success-50/30 dark:bg-success-900/5 rounded-lg">
+                                    <span class="text-5xl sm:text-7xl font-black text-success-600 dark:text-success-400 tracking-tighter drop-shadow-sm">
+                                        {{ $area->total_count }}
+                                    </span>
+                                    <span class="text-xs sm:text-sm font-bold text-success-600/70 dark:text-success-400/70 uppercase tracking-widest mt-1">
+                                        Active Hosts
                                     </span>
                                 </div>
-                                <div class="flex flex-col p-4 rounded-xl bg-success-50 dark:bg-success-900/10 border border-success-100 dark:border-success-900/20 text-right">
-                                    <span class="text-sm font-bold text-success-600/80 dark:text-success-400 uppercase tracking-wider mb-1">Online</span>
-                                    <span class="text-5xl font-bold text-success-600 dark:text-success-500">
-                                        {{ $area->up_count }}
-                                    </span>
-                                </div>
-                            </div>
+                            @endif
 
                             {{-- Progress Bar --}}
                             <div class="w-full h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden mb-3">
@@ -168,68 +181,69 @@
                             
                             {{-- Footer --}}
                             @if($area->down_count > 0)
-                                <div class="mt-auto flex items-center gap-2 text-sm font-bold text-danger-600 dark:text-danger-400 bg-danger-50 dark:bg-danger-900/20 py-2 px-3 rounded-lg">
-                                    <x-filament::icon icon="heroicon-m-exclamation-triangle" class="w-5 h-5" />
+                                <div class="mt-auto flex items-center justify-center gap-2 text-xs sm:text-sm font-bold text-danger-600 dark:text-danger-400 bg-danger-50 dark:bg-danger-900/20 py-2 px-3 rounded-lg">
+                                    <x-filament::icon icon="heroicon-m-exclamation-triangle" class="w-4 h-4 sm:w-5 sm:h-5" />
                                     {{ $area->down_count }} Offline
                                 </div>
                             @else
-                                <div class="mt-auto flex items-center gap-2 text-sm font-bold text-gray-500 dark:text-gray-400 py-2 px-3">
-                                    <x-filament::icon icon="heroicon-m-check-circle" class="w-5 h-5" />
-                                    No Issues
+                                <div class="mt-auto flex items-center justify-center gap-2 text-xs sm:text-sm font-bold text-success-600 dark:text-success-400 bg-success-50 dark:bg-success-900/20 py-2 px-3 rounded-lg">
+                                    <x-filament::icon icon="heroicon-m-check-circle" class="w-4 h-4 sm:w-5 sm:h-5" />
+                                    100% Online
+                                </div>
                             @endif
                         </a>
                     @endforeach
                 </div>
 
             @elseif($displayMode === 'chart')
-                <div class="space-y-3 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5">
+                <div class="space-y-4 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5">
                     @foreach($this->areas as $area)
                     @php $status = $getHealthStatus($area->health_score); @endphp
-                        <a href="{{ route('filament.admin.resources.areas.edit', $area->id) }}" class="block group">
-                            <div class="flex justify-between items-end mb-2">
-                                <div class="flex items-center gap-3">
-                                    <span class="text-base font-bold text-gray-800 dark:text-gray-200 w-32 truncate">{{ $area->name }}</span>
-                                    <span class="text-sm text-gray-500 dark:text-gray-500">
-                                        {{ $area->total_count }}
-                                    </span>
-                                </div>
-                                <span class="text-sm font-bold {{ $status['text'] }}">
-                                    {{ $area->health_score }}%
+                    
+                    <a href="{{ route('filament.admin.resources.areas.edit', $area->id) }}" class="flex items-center gap-4 sm:gap-6 p-2 rounded-lg hover:bg-gray-50 dark:hover:bg-white/5 transition-colors group">
+                        
+                        {{-- 1. Identity (Name & Total) --}}
+                        <div class="w-24 sm:w-32 shrink-0">
+                            <h3 class="text-sm sm:text-base font-bold text-gray-900 dark:text-white truncate" title="{{ $area->name }}">
+                                {{ $area->name }}
+                            </h3>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">
+                                {{ $area->total_count }} Hosts
+                            </p>
+                        </div>
+
+                        {{-- 2. The Visualization (Bar) --}}
+                        <div class="flex-1 h-3 sm:h-4 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden flex">
+                            {{-- Green Segment --}}
+                            @if($area->up_count > 0)
+                                <div class="h-full {{ $status['bar'] }} transition-all duration-500" style="width: {{ ($area->up_count / $area->total_count) * 100 }}%"></div>
+                            @endif
+                            {{-- Red Segment --}}
+                            @if($area->down_count > 0)
+                                <div class="h-full bg-danger-500 transition-all duration-500" style="width: {{ ($area->down_count / $area->total_count) * 100 }}%"></div>
+                            @endif
+                        </div>
+
+                        {{-- 3. The Metrics (Aligned Right) --}}
+                        <div class="flex items-center justify-end gap-3 sm:gap-4 w-32 sm:w-48 shrink-0">
+                            {{-- Counts --}}
+                            <div class="text-right flex flex-col sm:flex-row sm:gap-3">
+                                <span class="text-xs sm:text-sm font-bold text-success-600 dark:text-success-400">
+                                    {{ $area->up_count }} <span class="hidden sm:inline text-xs opacity-75">UP</span>
                                 </span>
-                            </div>
-                            
-                            <div class="relative w-full h-10 bg-gray-100 dark:bg-gray-800 rounded-md overflow-hidden flex shadow-inner border border-gray-200 dark:border-gray-700">
-                                {{-- Up Bar --}}
-                                @if($area->up_count > 0)
-                                    <div class="h-full bg-success-500 dark:bg-success-600 flex items-center justify-start px-2 transition-colors relative" 
-                                         style="width: {{ ($area->total_count > 0) ? ($area->up_count / $area->total_count) * 100 : 0 }}%">
-                                         @if(($area->up_count / $area->total_count) > 0.1)
-                                            <span class="text-xs font-bold text-white drop-shadow-md whitespace-nowrap">{{ $area->up_count }} UP</span>
-                                         @endif
-                                    </div>
-                                @endif
-                                
-                                {{-- Down Bar --}}
                                 @if($area->down_count > 0)
-                                    <div class="h-full bg-danger-500 dark:bg-danger-600 flex items-center justify-end px-2 transition-colors relative" 
-                                         style="width: {{ ($area->total_count > 0) ? ($area->down_count / $area->total_count) * 100 : 0 }}%">
-                                         @if(($area->down_count / $area->total_count) > 0.1)
-                                            <span class="text-xs font-bold text-white drop-shadow-md whitespace-nowrap">{{ $area->down_count }} DOWN</span>
-                                         @endif
-                                    </div>
+                                    <span class="text-xs sm:text-sm font-bold text-danger-600 dark:text-danger-400">
+                                        {{ $area->down_count }} <span class="hidden sm:inline text-xs opacity-75">DOWN</span>
+                                    </span>
                                 @endif
-                                
-                                {{-- Fallback labels for small bars or 0 counts --}}
-                                <div class="absolute inset-x-2 inset-y-0 flex justify-between items-center text-xs font-bold pointer-events-none">
-                                    @if(($area->up_count / $area->total_count) <= 0.1 && $area->up_count > 0)
-                                        <span class="text-gray-600 dark:text-gray-400 drop-shadow-sm ml-0.5">{{ $area->up_count }} UP</span>
-                                    @endif
-                                    @if(($area->down_count / $area->total_count) <= 0.1 && $area->down_count > 0)
-                                        <span class="text-danger-600 dark:text-danger-400 drop-shadow-sm mr-0.5">{{ $area->down_count }} DOWN</span>
-                                    @endif
-                                </div>
                             </div>
-                        </a>
+
+                            {{-- Badge --}}
+                            <span class="shrink-0 inline-flex items-center justify-center rounded-md px-2 py-1 text-xs font-bold ring-1 ring-inset {{ $status['badge'] }} w-12 sm:w-14">
+                                {{ $area->health_score }}%
+                            </span>
+                        </div>
+                    </a>
                     @endforeach
                 </div>
             @endif

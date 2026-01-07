@@ -34,67 +34,93 @@ class HealthCheckCommand extends Command
         // Chunk size for concurrency
         $chunkSize = 100;
         
-        $customers->chunk($chunkSize)->each(function ($chunk) {
-            $running = [];
-            foreach ($chunk as $customer) {
-                 $running[$customer->id] = \Illuminate\Support\Facades\Process::start("ping -c 1 -W 1 {$customer->ip_address}");
-            }
-            
-            $results = [];
-            while (count($running) > 0) {
-                foreach ($running as $id => $proc) {
-                    if (! $proc->running()) {
-                        $results[$id] = $proc->wait();
-                        unset($running[$id]);
+        if (env('SIMULATE_HEALTH_CHECKS', false)) {
+            $this->info('Running in SIMULATION MODE.');
+            $customers->chunk($chunkSize)->each(function ($chunk) {
+                foreach ($chunk as $customer) {
+                    // Random simulation (weighted)
+                    $rand = rand(1, 100);
+                    
+                    if ($rand <= 90) { 
+                        // 90% UP
+                        $status = 'up';
+                        $latency = rand(2, 50);
+                        $packetLoss = 0;
+                    } elseif ($rand <= 95) {
+                        // 5% UNSTABLE
+                        $status = 'unstable';
+                        $latency = rand(100, 500);
+                        $packetLoss = rand(10, 30);
+                    } else {
+                        // 5% DOWN
+                        $status = 'down';
+                        $latency = null;
+                        $packetLoss = 100;
                     }
+
+                    $customer->healthChecks()->create([
+                        'status' => $status,
+                        'latency_ms' => $latency,
+                        'packet_loss' => $packetLoss,
+                        'checked_at' => now(),
+                    ]);
+
+                    $this->updateCustomerStatus($customer, $status);
+                    $this->output->progressAdvance();
                 }
-                usleep(10000); // 10ms for tighter loop
-            }
-
-            // \Illuminate\Support\Facades\Log::info("HealthCheck: Results collected (Manual Parallel).");
-            
-            foreach ($results as $customerId => $result) {
-                // $customer = $chunk->find($customerId); // Works with ID keys
-                $customer = \App\Models\Customer::find($customerId);
-                $output = $result->output();
-                $errorOutput = $result->errorOutput();
-                $exitCode = $result->exitCode();
-                
-                // if (!empty($errorOutput)) Log::error(...)
-                
-                // if ($exitCode !== 0) { ... }
-                
-                // if (empty($output) ... ) { ... }
-                
-                // ... (Parsing Logic)
-                $status = 'down';
-                $latency = null;
-                $packetLoss = 100;
-
-                if (preg_match('/(\d+)% packet loss/', $output, $matches)) {
-                    $packetLoss = (float) $matches[1];
+            });
+        } else {
+            // Real Ping Logic
+            $customers->chunk($chunkSize)->each(function ($chunk) {
+                $running = [];
+                foreach ($chunk as $customer) {
+                     $running[$customer->id] = \Illuminate\Support\Facades\Process::start("ping -c 1 -W 1 {$customer->ip_address}");
                 }
-                if (preg_match('/rtt min\/avg\/max\/mdev = [\d\.]+\/([\d\.]+)\//', $output, $matches)) {
-                    $latency = (float) $matches[1];
+                
+                $results = [];
+                while (count($running) > 0) {
+                    foreach ($running as $id => $proc) {
+                        if (! $proc->running()) {
+                            $results[$id] = $proc->wait();
+                            unset($running[$id]);
+                        }
+                    }
+                    usleep(10000); // 10ms
                 }
-
-                if ($packetLoss < 20) {
-                    $status = 'up';
-                } elseif ($packetLoss < 100) {
-                    $status = 'unstable';
+    
+                foreach ($results as $customerId => $result) {
+                    $customer = \App\Models\Customer::find($customerId);
+                    $output = $result->output();
+                    
+                    $status = 'down';
+                    $latency = null;
+                    $packetLoss = 100;
+    
+                    if (preg_match('/(\d+)% packet loss/', $output, $matches)) {
+                        $packetLoss = (float) $matches[1];
+                    }
+                    if (preg_match('/rtt min\/avg\/max\/mdev = [\d\.]+\/([\d\.]+)\//', $output, $matches)) {
+                        $latency = (float) $matches[1];
+                    }
+    
+                    if ($packetLoss < 20) {
+                        $status = 'up';
+                    } elseif ($packetLoss < 100) {
+                        $status = 'unstable';
+                    }
+    
+                    $customer->healthChecks()->create([
+                        'status' => $status,
+                        'latency_ms' => $latency,
+                        'packet_loss' => $packetLoss,
+                        'checked_at' => now(),
+                    ]);
+    
+                    $this->updateCustomerStatus($customer, $status);
+                    $this->output->progressAdvance();
                 }
-
-                $customer->healthChecks()->create([
-                    'status' => $status,
-                    'latency_ms' => $latency,
-                    'packet_loss' => $packetLoss,
-                    'checked_at' => now(),
-                ]);
-
-                $this->updateCustomerStatus($customer, $status);
-                $this->output->progressAdvance();
-            }
-        });
+            });
+        }
 
         $this->output->progressFinish();
         $this->info('Health check completed.');
