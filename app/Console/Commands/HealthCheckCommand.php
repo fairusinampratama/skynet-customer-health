@@ -104,10 +104,20 @@ class HealthCheckCommand extends Command
                     $latency = null;
                     $packetLoss = 100;
     
-                    if (preg_match('/(\d+)% packet loss/', $output, $matches)) {
+                    // Parsing Packet Loss (Unified)
+                    // Linux: "100% packet loss"
+                    // Windows: "Lost = 0 (0% loss)"
+                    if (preg_match('/(\d+)% (?:packet )?loss/', $output, $matches)) {
                         $packetLoss = (float) $matches[1];
                     }
+                    
+                    // Parsing Latency (OS Specific)
+                    // Linux: rtt min/avg/max/mdev = 1.000/2.000/3.000/0.000 ms
                     if (preg_match('/rtt min\/avg\/max\/mdev = [\d\.]+\/([\d\.]+)\//', $output, $matches)) {
+                        $latency = (float) $matches[1];
+                    } 
+                    // Windows: Minimum = 0ms, Maximum = 0ms, Average = 2ms
+                    elseif (preg_match('/Average\s*=\s*(\d+)ms/i', $output, $matches)) {
                         $latency = (float) $matches[1];
                     }
     
