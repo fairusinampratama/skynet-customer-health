@@ -73,8 +73,16 @@ class HealthCheckCommand extends Command
             // Real Ping Logic
             $customers->chunk($chunkSize)->each(function ($chunk) {
                 $running = [];
+                $isWindows = PHP_OS_FAMILY === 'Windows';
+                
                 foreach ($chunk as $customer) {
-                     $running[$customer->id] = \Illuminate\Support\Facades\Process::start("ping -c 1 -W 1 {$customer->ip_address}");
+                     // Windows uses -n for count and -w for timeout (ms)
+                     // Linux uses -c for count and -W for timeout (s)
+                     $cmd = $isWindows 
+                        ? "ping -n 1 -w 1000 {$customer->ip_address}" 
+                        : "ping -c 1 -W 1 {$customer->ip_address}";
+                        
+                     $running[$customer->id] = \Illuminate\Support\Facades\Process::start($cmd);
                 }
                 
                 $results = [];
