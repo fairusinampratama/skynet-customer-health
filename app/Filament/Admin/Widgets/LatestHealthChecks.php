@@ -15,7 +15,7 @@ class LatestHealthChecks extends BaseWidget
     
     protected static ?string $heading = 'Latest Downtime Logs';
     
-    protected static ?int $sort = 2;
+    protected static ?int $sort = 3;
 
     public function table(Table $table): Table
     {
