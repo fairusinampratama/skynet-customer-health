@@ -75,35 +75,36 @@
                         <thead class="text-xs text-gray-500 dark:text-gray-400 uppercase bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-800">
                             <tr>
                                 <th class="px-6 py-3 font-semibold tracking-wider">Area Name</th>
-                                <th class="px-6 py-3 font-semibold text-center tracking-wider">Total CPEs</th>
+                                <th class="px-6 py-3 font-semibold text-center tracking-wider text-danger-600 dark:text-danger-400">Offline</th>
                                 <th class="px-6 py-3 font-semibold text-center tracking-wider">Online</th>
-                                <th class="px-6 py-3 font-semibold text-center tracking-wider">Offline</th>
+                                <th class="px-6 py-3 font-semibold text-center tracking-wider">Total</th>
                                 <th class="px-6 py-3 font-semibold text-center tracking-wider">Health</th>
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-200 dark:divide-gray-800 bg-white dark:bg-gray-900">
                             @foreach($this->areas as $area)
                                 @php $status = $getHealthStatus($area->health_score); @endphp
-                                <tr class="group hover:bg-gray-50 dark:hover:bg-white/5 transition-colors">
+                                <tr class="group hover:bg-gray-50 dark:hover:bg-white/5 transition-colors cursor-pointer" 
+                                    onclick="window.location='{{ route('filament.admin.resources.areas.edit', $area->id) }}'">
                                     <th class="px-6 py-4 font-semibold text-gray-900 dark:text-white whitespace-nowrap">
                                         {{ $area->name }}
                                     </th>
-                                    <td class="px-6 py-4 text-center text-gray-500 dark:text-gray-400 font-mono">
-                                        {{ $area->total_count }}
-                                    </td>
-                                    <td class="px-6 py-4 text-center">
-                                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium bg-success-50 text-success-700 dark:bg-success-400/10 dark:text-success-400 ring-1 ring-inset ring-success-600/20">
-                                            {{ $area->up_count }}
-                                        </span>
-                                    </td>
                                     <td class="px-6 py-4 text-center">
                                         @if($area->down_count > 0)
-                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium bg-danger-50 text-danger-700 dark:bg-danger-400/10 dark:text-danger-400 ring-1 ring-inset ring-danger-600/20">
+                                            <span class="inline-flex items-center px-2.5 py-1 rounded-md text-sm font-bold bg-danger-50 text-danger-700 dark:bg-danger-400/10 dark:text-danger-400 ring-1 ring-inset ring-danger-600/20">
                                                 {{ $area->down_count }}
                                             </span>
                                         @else
-                                            <span class="text-gray-400 dark:text-gray-600">-</span>
+                                            <span class="text-gray-400 dark:text-gray-600 font-mono text-sm">0</span>
                                         @endif
+                                    </td>
+                                    <td class="px-6 py-4 text-center">
+                                        <span class="text-sm font-medium text-gray-600 dark:text-gray-400">
+                                            {{ $area->up_count }}
+                                        </span>
+                                    </td>
+                                    <td class="px-6 py-4 text-center text-gray-400 dark:text-gray-500 font-mono text-xs">
+                                        / {{ $area->total_count }}
                                     </td>
                                     <td class="px-6 py-4 text-center">
                                         <div class="flex items-center justify-center gap-3">
@@ -127,7 +128,7 @@
                 <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                     @foreach($this->areas as $area)
                         @php $status = $getHealthStatus($area->health_score); @endphp
-                        <div class="relative p-5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm hover:shadow-md hover:border-primary-200 dark:hover:border-primary-900 transition-all duration-300 group">
+                        <a href="{{ route('filament.admin.resources.areas.edit', $area->id) }}" class="flex flex-col h-full relative p-5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm hover:shadow-md hover:border-primary-200 dark:hover:border-primary-900 transition-all duration-300 group">
                             
                             {{-- Top Row --}}
                             <div class="flex justify-between items-start mb-4">
@@ -144,15 +145,27 @@
                                 </span>
                             </div>
 
-                            {{-- Stats Row --}}
-                            <div class="flex items-end gap-x-2 mb-3">
-                                <span class="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
-                                    {{ $area->up_count }}
-                                </span>
-                                <span class="text-sm font-medium text-success-600 dark:text-success-400 mb-1.5 flex items-center gap-1">
-                                    <div class="w-1.5 h-1.5 rounded-full bg-success-500 animate-pulse"></div>
-                                    Online
-                                </span>
+                            {{-- Stats Row (Refocused on Offline) --}}
+                            <div class="flex items-end justify-between mb-3">
+                                <div>
+                                    <div class="flex items-baseline gap-1">
+                                        <span class="text-3xl font-bold tracking-tight {{ $area->down_count > 0 ? 'text-danger-600 dark:text-danger-500' : 'text-success-600 dark:text-success-500' }}">
+                                            {{ $area->down_count }}
+                                        </span>
+                                        <span class="text-sm font-medium text-gray-500 dark:text-gray-400">Offline</span>
+                                    </div>
+                                    <p class="text-xs font-medium mt-1 min-h-[1.25em] {{ $area->down_count > 0 ? 'text-danger-600 dark:text-danger-400 animate-pulse' : 'invisible' }}">
+                                        {{ $area->down_count > 0 ? 'Attention Needed' : 'Ok' }}
+                                    </p>
+                                </div>
+                                <div class="text-right">
+                                    <div class="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                                        {{ $area->up_count }} <span class="text-xs text-gray-500 font-normal">Online</span>
+                                    </div>
+                                    <div class="text-xs text-gray-400 dark:text-gray-600 mt-0.5">
+                                        of {{ $area->total_count }} Total
+                                    </div>
+                                </div>
                             </div>
 
                             {{-- Progress Bar --}}
@@ -162,17 +175,16 @@
                             
                             {{-- Footer --}}
                             @if($area->down_count > 0)
-                                <div class="flex items-center gap-1.5 text-xs font-medium text-danger-600 dark:text-danger-400 bg-danger-50 dark:bg-danger-900/20 py-1.5 px-2.5 rounded-md">
+                                <div class="mt-auto flex items-center gap-1.5 text-xs font-medium text-danger-600 dark:text-danger-400 bg-danger-50 dark:bg-danger-900/20 py-1.5 px-2.5 rounded-md">
                                     <x-filament::icon icon="heroicon-m-exclamation-triangle" class="w-3.5 h-3.5" />
                                     {{ $area->down_count }} Offline
                                 </div>
                             @else
-                                <div class="flex items-center gap-1.5 text-xs font-medium text-gray-400 dark:text-gray-500 py-1.5 px-2.5">
+                                <div class="mt-auto flex items-center gap-1.5 text-xs font-medium text-gray-400 dark:text-gray-500 py-1.5 px-2.5">
                                     <x-filament::icon icon="heroicon-m-check-circle" class="w-3.5 h-3.5" />
-                                    All Systems Operational
-                                </div>
+                                    No Issues
                             @endif
-                        </div>
+                        </a>
                     @endforeach
                 </div>
 
@@ -180,7 +192,7 @@
                 <div class="space-y-3 bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-5">
                     @foreach($this->areas as $area)
                     @php $status = $getHealthStatus($area->health_score); @endphp
-                        <div class="group">
+                        <a href="{{ route('filament.admin.resources.areas.edit', $area->id) }}" class="block group">
                             <div class="flex justify-between items-end mb-1.5">
                                 <div class="flex items-center gap-2">
                                     <span class="text-sm font-medium text-gray-700 dark:text-gray-200 w-24 truncate">{{ $area->name }}</span>
@@ -193,30 +205,38 @@
                                 </span>
                             </div>
                             
-                            <div class="relative w-full h-5 bg-gray-100 dark:bg-gray-800 rounded-md overflow-hidden flex">
+                            <div class="relative w-full h-8 bg-gray-100 dark:bg-gray-800 rounded-md overflow-hidden flex shadow-inner border border-gray-200 dark:border-gray-700">
                                 {{-- Up Bar --}}
                                 @if($area->up_count > 0)
-                                    <div class="h-full bg-success-500 dark:bg-success-600 flex items-center justify-center group-hover:bg-success-400 transition-colors" 
+                                    <div class="h-full bg-success-500 dark:bg-success-600 flex items-center justify-start px-2 transition-colors relative" 
                                          style="width: {{ ($area->total_count > 0) ? ($area->up_count / $area->total_count) * 100 : 0 }}%">
+                                         @if(($area->up_count / $area->total_count) > 0.1)
+                                            <span class="text-[10px] font-bold text-white drop-shadow-md whitespace-nowrap">{{ $area->up_count }} UP</span>
+                                         @endif
                                     </div>
                                 @endif
                                 
                                 {{-- Down Bar --}}
                                 @if($area->down_count > 0)
-                                    <div class="h-full bg-danger-500 dark:bg-danger-600 flex items-center justify-center group-hover:bg-danger-400 transition-colors" 
+                                    <div class="h-full bg-danger-500 dark:bg-danger-600 flex items-center justify-end px-2 transition-colors relative" 
                                          style="width: {{ ($area->total_count > 0) ? ($area->down_count / $area->total_count) * 100 : 0 }}%">
+                                         @if(($area->down_count / $area->total_count) > 0.1)
+                                            <span class="text-[10px] font-bold text-white drop-shadow-md whitespace-nowrap">{{ $area->down_count }} DOWN</span>
+                                         @endif
                                     </div>
                                 @endif
                                 
-                                {{-- Floating Text Overlay --}}
-                                <div class="absolute inset-x-2 inset-y-0 flex justify-between items-center text-[10px] font-bold text-white pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <span class="drop-shadow-sm">{{ $area->up_count }} UP</span>
-                                    @if($area->down_count > 0)
-                                        <span class="drop-shadow-sm">{{ $area->down_count }} DOWN</span>
+                                {{-- Fallback labels for small bars or 0 counts --}}
+                                <div class="absolute inset-x-2 inset-y-0 flex justify-between items-center text-[10px] font-bold pointer-events-none">
+                                    @if(($area->up_count / $area->total_count) <= 0.1 && $area->up_count > 0)
+                                        <span class="text-gray-600 dark:text-gray-400 drop-shadow-sm ml-0.5">{{ $area->up_count }} UP</span>
+                                    @endif
+                                    @if(($area->down_count / $area->total_count) <= 0.1 && $area->down_count > 0)
+                                        <span class="text-danger-600 dark:text-danger-400 drop-shadow-sm mr-0.5">{{ $area->down_count }} DOWN</span>
                                     @endif
                                 </div>
                             </div>
-                        </div>
+                        </a>
                     @endforeach
                 </div>
             @endif
