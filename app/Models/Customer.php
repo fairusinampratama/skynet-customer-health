@@ -15,10 +15,12 @@ class Customer extends Model
         'location',
         'ip_address',
         'status',
+        'is_isolated',
         'last_alerted_at',
     ];
 
     protected $casts = [
+        'is_isolated' => 'boolean',
         'last_alerted_at' => 'datetime',
     ];
 

@@ -24,6 +24,9 @@ class CustomerForm
                 TextInput::make('ip_address')
                     ->required()
                     ->ipv4(),
+                \Filament\Forms\Components\Toggle::make('is_isolated')
+                    ->default(false)
+                    ->required(),
             ]);
     }
 }

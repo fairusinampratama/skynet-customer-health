@@ -24,6 +24,8 @@ class DatabaseSeeder extends Seeder
 
         $this->call([
             XlsxImportSeeder::class,
+            ServerImportSeeder::class,
+            IsolationStateSeeder::class,
         ]);
     }
 }

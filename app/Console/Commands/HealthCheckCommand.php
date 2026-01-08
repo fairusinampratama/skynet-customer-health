@@ -282,6 +282,11 @@ class HealthCheckCommand extends Command
         if ($customer->refresh()->status === 'down') {
              $downSince = $customer->updated_at; // Time it changed to down
              if ($downSince->diffInMinutes(now()) >= 5) {
+                // Skip if isolated
+                if ($customer->is_isolated) {
+                    return;
+                }
+
                 if (! $customer->last_alerted_at || $customer->last_alerted_at < $downSince) {
                     $this->sendTelegramAlert($customer, $downSince);
                     $customer->update(['last_alerted_at' => now()]);

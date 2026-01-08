@@ -38,8 +38,8 @@ class StatsOverview extends StatsOverviewWidget
                     ->toArray()
                 )
                 ->color('warning'),
-            Stat::make('Down', \App\Models\Customer::where('status', 'down')->count())
-                ->description('Customers currently DOWN')
+            Stat::make('Down', \App\Models\Customer::where('status', 'down')->where('is_isolated', false)->count())
+                ->description('Customers CRITICALLY DOWN')
                 ->descriptionIcon('heroicon-m-arrow-trending-down')
                 ->chart(\App\Models\HealthCheck::selectRaw('count(*) as count')
                     ->where('status', 'down')

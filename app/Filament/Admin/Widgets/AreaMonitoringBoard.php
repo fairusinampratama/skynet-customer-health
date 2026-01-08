@@ -30,7 +30,9 @@ class AreaMonitoringBoard extends Widget
             ->withCount(['customers as up_count' => function ($query) {
                 $query->where('status', 'up');
             }, 'customers as down_count' => function ($query) {
-                $query->where('status', 'down');
+                $query->where('status', 'down')->where('is_isolated', false);
+            }, 'customers as isolated_count' => function ($query) { // Optional: track isolated
+                $query->where('is_isolated', true);
             }, 'customers as total_count'])
             ->get()
             ->map(function ($area) {
