@@ -24,6 +24,7 @@ class LatestHealthChecks extends BaseWidget
             ->query(
                 \App\Models\Customer::query()
                     ->where('status', 'down')
+                    ->where('is_isolated', false)
             )
             ->defaultSort('updated_at', 'asc') // Default: Longest downtime first
             ->columns([

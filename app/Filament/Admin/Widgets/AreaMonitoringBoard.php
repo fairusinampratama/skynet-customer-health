@@ -28,12 +28,12 @@ class AreaMonitoringBoard extends Widget
     {
         return \App\Models\Area::query()
             ->withCount(['customers as up_count' => function ($query) {
-                $query->where('status', 'up');
+                $query->where('status', 'up')->where('is_isolated', false);
             }, 'customers as down_count' => function ($query) {
                 $query->where('status', 'down')->where('is_isolated', false);
-            }, 'customers as isolated_count' => function ($query) { // Optional: track isolated
-                $query->where('is_isolated', true);
-            }, 'customers as total_count'])
+            }, 'customers as total_count' => function ($query) {
+                 $query->where('is_isolated', false); // Only monitored customers
+            }])
             ->get()
             ->map(function ($area) {
                 $area->health_score = $area->total_count > 0 
