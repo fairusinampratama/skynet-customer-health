@@ -39,6 +39,8 @@ class AdminPanelProvider extends PanelProvider
             ])
             ->discoverWidgets(in: app_path('Filament/Admin/Widgets'), for: 'App\Filament\Admin\Widgets')
             ->widgets([
+                \App\Filament\Admin\Widgets\AreaMonitoringBoard::class,
+                \App\Filament\Admin\Resources\Servers\Widgets\ServerMonitoringBoard::class,
                 // Widgets\AccountWidget::class,
                 // Widgets\FilamentInfoWidget::class,
             ])

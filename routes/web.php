@@ -9,3 +9,8 @@ Route::get('/', function () {
 Route::get('/login', function () {
     return redirect()->route('filament.admin.auth.login');
 })->name('login');
+
+use App\Http\Controllers\TvController;
+
+Route::get('/tv/areas', [TvController::class, 'areas']);
+Route::get('/tv/servers', [TvController::class, 'servers']);
