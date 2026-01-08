@@ -23,6 +23,11 @@ class CustomersTable
                 TextColumn::make('ip_address')
                     ->searchable()
                     ->copyable(),
+                \Filament\Tables\Columns\IconColumn::make('is_isolated')
+                    ->label('Isolated')
+                    ->icon(fn (string $state): ?string => $state ? 'heroicon-m-signal-slash' : null)
+                    ->color(fn (string $state): string => $state ? 'warning' : 'gray')
+                    ->sortable(),
                 TextColumn::make('status')
                     ->label('Status')
                     ->badge()
