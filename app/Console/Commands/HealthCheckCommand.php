@@ -25,8 +25,123 @@ class HealthCheckCommand extends Command
     /**
      * Execute the console command.
      */
+    /**
+     * Execute the console command.
+     */
     public function handle()
     {
+        $this->checkCustomers();
+        $this->checkServers();
+        
+        $this->info('Health check completed for all systems.');
+    }
+
+    protected function checkServers()
+    {
+        $this->info('Starting Server Health Check...');
+        $servers = \App\Models\Server::all();
+        $total = $servers->count();
+        $this->output->progressStart($total);
+        $chunkSize = 50; // Smaller chunk for critical infra
+
+        if (env('SIMULATE_HEALTH_CHECKS', false)) {
+            $servers->each(function ($server) {
+                // Simulation: 95% UP
+                $rand = rand(1, 100);
+                if ($rand <= 95) {
+                    $status = 'up';
+                    $latency = rand(1, 10);
+                    $packetLoss = 0;
+                } else {
+                    $status = 'down';
+                    $latency = null;
+                    $packetLoss = 100;
+                }
+
+                $server->healthChecks()->create([
+                    'status' => $status,
+                    'latency_ms' => $latency,
+                    'packet_loss' => $packetLoss,
+                    'checked_at' => now(),
+                ]);
+
+                $server->update([
+                    'status' => $status,
+                    'last_seen' => $status === 'up' ? now() : $server->last_seen,
+                ]);
+                
+                $this->output->progressAdvance();
+            });
+        } else {
+            // Real Ping Logic (Reused Pattern)
+            $servers->chunk($chunkSize)->each(function ($chunk) {
+                $running = [];
+                $isWindows = PHP_OS_FAMILY === 'Windows';
+                
+                foreach ($chunk as $server) {
+                     $cmd = $isWindows 
+                        ? "ping -n 1 -w 1000 {$server->ip_address}" 
+                        : "ping -c 1 -W 1 {$server->ip_address}";
+                     $running[$server->id] = \Illuminate\Support\Facades\Process::start($cmd);
+                }
+                
+                $results = [];
+                while (count($running) > 0) {
+                    foreach ($running as $id => $proc) {
+                        if (! $proc->running()) {
+                            $results[$id] = $proc->wait();
+                            unset($running[$id]);
+                        }
+                    }
+                    usleep(10000); 
+                }
+    
+                foreach ($results as $serverId => $result) {
+                    $server = \App\Models\Server::find($serverId);
+                    $output = $result->output();
+                    
+                    $status = 'down';
+                    $latency = null;
+                    $packetLoss = 100;
+                    
+                    if (preg_match('/(\d+)% (?:packet )?loss/', $output, $matches)) {
+                        $packetLoss = (float) $matches[1];
+                    }
+                    
+                    if (preg_match('/rtt min\/avg\/max\/mdev = [\d\.]+\/([\d\.]+)\//', $output, $matches)) {
+                        $latency = (float) $matches[1];
+                    } elseif (preg_match('/Average\s*=\s*(\d+)ms/i', $output, $matches)) {
+                        $latency = (float) $matches[1];
+                    }
+    
+                    if ($packetLoss < 20) {
+                        $status = 'up';
+                    } elseif ($packetLoss < 100) {
+                        $status = 'unstable';
+                    }
+    
+                    $server->healthChecks()->create([
+                        'status' => $status,
+                        'latency_ms' => $latency,
+                        'packet_loss' => $packetLoss,
+                        'checked_at' => now(),
+                    ]);
+    
+                    $server->update([
+                        'status' => $status,
+                        'last_seen' => $status === 'up' ? now() : $server->last_seen,
+                    ]);
+                    
+                    $this->output->progressAdvance();
+                }
+            });
+        }
+        $this->output->progressFinish();
+    }
+
+    protected function checkCustomers()
+    {
+        $this->info('Starting Customer Health Check...');
         $customers = Customer::all();
         $total = $customers->count();
         $this->output->progressStart($total);
@@ -57,14 +172,14 @@ class HealthCheckCommand extends Command
                         $latency = null;
                         $packetLoss = 100;
                     }
-
+ 
                     $customer->healthChecks()->create([
                         'status' => $status,
                         'latency_ms' => $latency,
                         'packet_loss' => $packetLoss,
                         'checked_at' => now(),
                     ]);
-
+ 
                     $this->updateCustomerStatus($customer, $status);
                     $this->output->progressAdvance();
                 }
@@ -139,9 +254,8 @@ class HealthCheckCommand extends Command
                 }
             });
         }
-
+ 
         $this->output->progressFinish();
-        $this->info('Health check completed.');
     }
 
     protected function updateCustomerStatus($customer, $newStatus)

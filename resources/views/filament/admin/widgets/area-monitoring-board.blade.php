@@ -1,5 +1,5 @@
 <x-filament-widgets::widget>
-    <x-filament::section :is-collapsible="true" class="overflow-hidden">
+    <x-filament::section :is-collapsible="true" class="">
         {{-- Header Section --}}
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
             <div class="flex items-center gap-3">
@@ -86,7 +86,7 @@
                                 @php $status = $getHealthStatus($area->health_score); @endphp
                                 <tr class="group hover:bg-gray-50 dark:hover:bg-white/5 transition-colors cursor-pointer" 
                                     onclick="window.location='{{ route('filament.admin.resources.areas.edit', $area->id) }}'">
-                                    <th class="px-6 py-5 font-semibold text-lg text-gray-900 dark:text-white whitespace-nowrap">
+                                    <th class="px-6 py-5 font-semibold text-lg text-gray-900 dark:text-white whitespace-nowrap uppercase">
                                         {{ $area->name }}
                                     </th>
                                     <td class="px-6 py-5 text-center">
@@ -133,7 +133,7 @@
                             {{-- Top Row --}}
                             <div class="flex justify-between items-start mb-4 sm:mb-6 gap-2">
                                 <div class="overflow-hidden">
-                                    <h3 class="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white truncate" title="{{ $area->name }}">
+                                    <h3 class="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white truncate uppercase" title="{{ $area->name }}">
                                         {{ $area->name }}
                                     </h3>
                                     <p class="text-sm sm:text-base text-gray-500 dark:text-gray-400 mt-1">
@@ -155,9 +155,9 @@
                                             {{ $area->down_count }}
                                         </span>
                                     </div>
-                                    <div class="flex flex-col p-3 sm:p-4 rounded-xl bg-gray-50 dark:bg-gray-800/50 border border-gray-100 dark:border-gray-700 text-right opacity-75">
-                                        <span class="text-xs sm:text-sm font-bold text-gray-500/80 dark:text-gray-400 uppercase tracking-wider mb-1">Online</span>
-                                        <span class="font-bold text-gray-600 dark:text-gray-400 {{ strlen($area->up_count) > 2 ? 'text-2xl sm:text-4xl' : 'text-3xl sm:text-5xl' }}">
+                                    <div class="flex flex-col p-3 sm:p-4 rounded-xl bg-success-50 dark:bg-success-900/10 border border-success-100 dark:border-success-900/20 text-right">
+                                        <span class="text-xs sm:text-sm font-bold text-success-600/80 dark:text-success-400 uppercase tracking-wider mb-1">Online</span>
+                                        <span class="font-bold text-success-600 dark:text-success-500 {{ strlen($area->up_count) > 2 ? 'text-2xl sm:text-4xl' : 'text-3xl sm:text-5xl' }}">
                                             {{ $area->up_count }}
                                         </span>
                                     </div>
@@ -204,7 +204,7 @@
                         
                         {{-- 1. Identity (Name & Total) --}}
                         <div class="w-24 sm:w-32 shrink-0">
-                            <h3 class="text-sm sm:text-base font-bold text-gray-900 dark:text-white truncate" title="{{ $area->name }}">
+                            <h3 class="text-sm sm:text-base font-bold text-gray-900 dark:text-white truncate uppercase" title="{{ $area->name }}">
                                 {{ $area->name }}
                             </h3>
                             <p class="text-xs text-gray-500 dark:text-gray-400">
@@ -249,4 +249,95 @@
             @endif
         </div>
     </x-filament::section>
+    <div x-data="tvAutoScroll"></div>
+    <script>
+        document.addEventListener('alpine:init', () => {
+            Alpine.data('tvAutoScroll', () => ({
+                init() {
+                    if (!window.location.pathname.includes('/tv/')) return;
+                    
+                    // Initialize global state if missing
+                    if (!window.tvScrollState) {
+                        window.tvScrollState = {
+                            running: false,
+                            direction: 'down',
+                            lastTimestamp: 0
+                        };
+                    }
+
+                    if (window.tvScrollState.running) return;
+                    window.tvScrollState.running = true;
+
+                    this.startLoop();
+                },
+
+                startLoop() {
+                    const scrollSpeed = 50; // pixels per second
+                    const pauseDuration = 5000;
+                    
+                    const loop = (timestamp) => {
+                        // Calculate delta time for smooth speed regardless of frame rate
+                        if (!window.tvScrollState.lastTimestamp) window.tvScrollState.lastTimestamp = timestamp;
+                        const deltaTime = timestamp - window.tvScrollState.lastTimestamp;
+                        window.tvScrollState.lastTimestamp = timestamp;
+
+                        const totalHeight = document.body.scrollHeight;
+                        const visibleHeight = window.innerHeight;
+                        const maxScroll = totalHeight - visibleHeight;
+
+                        // If content fits on screen, just keep checking
+                        if (maxScroll <= 0) {
+                            requestAnimationFrame(loop);
+                            return;
+                        }
+
+                        // Bottom detection with fuzz factor (5px)
+                        if (window.tvScrollState.direction === 'down') {
+                            if (window.scrollY < maxScroll - 5) {
+                                // Scroll down 1px
+                                window.scrollBy(0, 1);
+                                // Throttle speed simply by setTimeout recursion? 
+                                // No, requestAnimationFrame is 60fps.
+                                // To control speed, we need logic. 
+                                // But simpler: existing logic worked for 'down', failed for 'up'.
+                                // Let's keep the simple setTimeout approach but use global direction.
+                            } else {
+                                window.tvScrollState.direction = 'up';
+                                setTimeout(() => {
+                                    window.tvScrollState.lastTimestamp = 0; // reset
+                                    requestAnimationFrame(loop); 
+                                }, pauseDuration);
+                                return; // Stop this frame, resume after timeout
+                            }
+                        } else {
+                            // Up logic
+                            if (window.scrollY > 0) {
+                                window.scrollBy(0, -2); // Fast rewind
+                            } else {
+                                window.tvScrollState.direction = 'down';
+                                setTimeout(() => {
+                                    window.tvScrollState.lastTimestamp = 0;
+                                    requestAnimationFrame(loop);
+                                }, pauseDuration);
+                                return;
+                            }
+                        }
+
+                        // Recursion control
+                        // We used setTimeout before to throttle frame rate.
+                        // Let's stick to setTimeout for consistency with previous working "down" logic,
+                        // but use the GLOBAL direction.
+                        
+                        const delay = window.tvScrollState.direction === 'down' 
+                            ? (1000 / scrollSpeed) 
+                            : (1000 / (scrollSpeed * 2));
+                            
+                        setTimeout(() => { requestAnimationFrame(loop); }, delay);
+                    };
+
+                    requestAnimationFrame(loop);
+                }
+            }));
+        });
+    </script>
 </x-filament-widgets::widget>
