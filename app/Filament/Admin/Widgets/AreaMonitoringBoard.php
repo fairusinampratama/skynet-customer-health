@@ -9,7 +9,7 @@ class AreaMonitoringBoard extends Widget
     protected string $view = 'filament.admin.widgets.area-monitoring-board';
     protected static ?int $sort = 2;
     protected int | string | array $columnSpan = 'full';
-    protected ?string $pollingInterval = '10s';
+    protected ?string $pollingInterval = '30s';
 
     public $displayMode = 'table'; // card, table, chart
 

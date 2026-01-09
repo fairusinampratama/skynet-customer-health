@@ -14,3 +14,4 @@ use App\Http\Controllers\TvController;
 
 Route::get('/tv/areas', [TvController::class, 'areas']);
 Route::get('/tv/servers', [TvController::class, 'servers']);
+Route::get('/tv/downtime', [TvController::class, 'downtime']);

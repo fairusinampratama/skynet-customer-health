@@ -41,6 +41,7 @@ class AdminPanelProvider extends PanelProvider
             ->widgets([
                 \App\Filament\Admin\Widgets\AreaMonitoringBoard::class,
                 \App\Filament\Admin\Resources\Servers\Widgets\ServerMonitoringBoard::class,
+                \App\Filament\Admin\Widgets\DowntimeMonitoringBoard::class,
                 // Widgets\AccountWidget::class,
                 // Widgets\FilamentInfoWidget::class,
             ])

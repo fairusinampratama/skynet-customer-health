@@ -13,6 +13,7 @@ class CustomersTable
     public static function configure(Table $table): Table
     {
         return $table
+            ->poll('30s')
             ->columns([
                 TextColumn::make('area.name')
                     ->sortable()
@@ -38,6 +39,36 @@ class CustomersTable
                         default => 'gray',
                     })
                     ->sortable(),
+                TextColumn::make('downtime')
+                    ->label('Downtime')
+                    ->state(fn (\App\Models\Customer $record): string => 
+                        $record->status === 'down' 
+                            ? $record->updated_at->diffForHumans(null, true, true) 
+                            : '-'
+                    )
+                    ->description(fn (\App\Models\Customer $record): ?string => 
+                        $record->status === 'down' 
+                            ? $record->updated_at->format('M d, H:i') 
+                            : null
+                    )
+                    ->color(fn (string $state): string => $state !== '-' ? 'danger' : 'gray'),
+                TextColumn::make('latestHealth.latency_ms')
+                    ->label('Latency')
+                    ->suffix(' ms')
+                    ->numeric()
+                    ->sortable()
+                    ->color(fn ($state) => $state > 100 ? 'warning' : 'success'),
+                TextColumn::make('latestHealth.packet_loss')
+                    ->label('Packet Loss')
+                    ->suffix('%')
+                    ->numeric()
+                    ->sortable()
+                    ->color(fn ($state) => $state > 0 ? 'danger' : 'gray'),
+                TextColumn::make('last_alerted_at')
+                    ->label('Last Alerted')
+                    ->dateTime()
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('latestHealth.checked_at')
                     ->label('Last Check')
                     ->dateTime()

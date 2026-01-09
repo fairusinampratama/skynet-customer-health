@@ -1,4 +1,4 @@
-<x-filament-widgets::widget>
+<x-filament-widgets::widget wire:poll.30s>
     <x-filament::section :is-collapsible="true" class="">
         {{-- Header Section --}}
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
