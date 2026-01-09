@@ -15,4 +15,9 @@ class TvController extends Controller
     {
         return view('tv.servers');
     }
+
+    public function downtime()
+    {
+        return view('tv.downtime');
+    }
 }
