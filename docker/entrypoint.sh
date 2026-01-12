@@ -11,11 +11,6 @@ php artisan config:cache
 php artisan route:cache
 php artisan view:cache
 
-# Start Scheduler in background (simple way for single container)
-# Note: In a real heavy prod, scheduler should be a separate sidecar, but for this VM usage, backgrounding is fine.
-echo "Starting Scheduler..."
-php artisan schedule:work &
-
-# Start Apache in foreground
-echo "Starting Apache..."
-exec apache2-foreground
+# Start Supervisor (which starts Nginx + PHP-FPM + Scheduler)
+echo "Starting Supervisor..."
+exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf
