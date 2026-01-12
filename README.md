@@ -1,60 +1,83 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Skynet Customer Health Monitor
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+A real-time network monitoring dashboard designed for ISPs to track customer and server connectivity health.
 
-## About Laravel
+![Dashboard Preview](https://github.com/laravel/framework/workflows/tests/badge.svg) *Note: Replace with actual screenshot*
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## 🚀 Overview
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+Skynet Customer Health provides Network Operations Centers (NOC) and Support teams with instant visibility into network performance. It monitors thousands of customers and critical servers in real-time, offering both a detailed Admin Panel and a hands-free TV Dashboard for wall-mounted displays.
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+## ✨ Key Features
 
-## Learning Laravel
+- **Real-Time Monitoring**: Checks customer connection status, latency, and packet loss every minute.
+- **TV Dashboard**: Dedicated, auto-scrolling views (`/tv/areas`, `/tv/servers`) for clear visibility in the NOC.
+- **Smart Isolation**: Toggle "Isolation Mode" for customers (maintenance/non-payment) to suppress alerts and exclude them from downtime stats.
+- **Incident Prevention**: High-frequency 30s dashboard refresh rate to spot outages instantly.
+- **Scalable Architecture**:
+    - Automated **Data Pruning**: Retains detailed health logs for 7 days to keep the database fast.
+    - Optimized Indexes: efficient querying for large datasets (~1,600+ customers).
+- **Reporting**: Automated WhatsApp integration for daily status reports.
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+## 🛠 Tech Stack
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+- **Framework**: [Laravel](https://laravel.com)
+- **Admin Panel**: [FilamentPHP](https://filamentphp.com)
+- **Database**: MySQL / MariaDB
+- **Frontend**: Blade & TailwindCSS (Alpine.js for interactive widgets)
+- **Tools**: `ripgrep` (for internal ops tools), Artisan Scheduler
 
-## Laravel Sponsors
+## ⚙️ Installation
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/your-org/skynet-customer-health.git
+   cd skynet-customer-health
+   ```
 
-### Premium Partners
+2. **Install Dependencies**
+   ```bash
+   composer install
+   npm install && npm run build
+   ```
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+3. **Environment Setup**
+   ```bash
+   cp .env.example .env
+   php artisan key:generate
+   ```
+   *Configure your database credentials in `.env`*
 
-## Contributing
+4. **Database Migration**
+   ```bash
+   php artisan migrate --seed
+   ```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+5. **Start the System**
+   ```bash
+   php artisan serve
+   ```
+   *Visit `http://localhost:8000/admin`*
 
-## Code of Conduct
+## ⏰ Scheduler & Workers
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+For the monitoring Checks and Auto-Pruning to work, the Laravel Scheduler must be running:
 
-## Security Vulnerabilities
+```bash
+# Run locally
+php artisan schedule:work
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+# Production (Cron)
+* * * * * cd /path-to-project && php artisan schedule:run >> /dev/null 2>&1
+```
 
-## License
+**Key Scheduled Tasks:**
+- `health:check` (Every Minute): Pings all customers/servers.
+- `model:prune` (Daily): Deletes health logs older than 7 days.
+- `app:send-daily-error-report` (Daily 08:00): WhatsApp report.
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
-# skynet-customer-health
+## 📺 TV Dashboard Routes
+
+- **Area Health**: `/tv/areas`
+- **Server Health**: `/tv/servers`
+- **Downtime Feed**: `/tv/downtime`
