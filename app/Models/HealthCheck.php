@@ -4,10 +4,11 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Prunable;
 
 class HealthCheck extends Model
 {
-    use HasFactory;
+    use HasFactory, Prunable;
 
     public $timestamps = false; // IMPORTANT
 
@@ -22,6 +23,14 @@ class HealthCheck extends Model
     protected $casts = [
         'checked_at' => 'datetime',
     ];
+
+    /**
+     * Get the prunable model query.
+     */
+    public function prunable()
+    {
+        return static::where('checked_at', '<=', now()->subDays(7));
+    }
 
     public function customer()
     {
