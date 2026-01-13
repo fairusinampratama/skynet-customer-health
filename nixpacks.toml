@@ -17,7 +17,8 @@ nixPkgs = [
     "php84Extensions.filter",
     "php84Extensions.tokenizer",
     "nodejs_20",
-    "npm-9_x"
+    "npm-9_x",
+    "iputils"
 ]
 
 [phases.install]
