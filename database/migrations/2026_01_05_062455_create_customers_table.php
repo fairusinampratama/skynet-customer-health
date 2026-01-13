@@ -18,8 +18,12 @@ return new class extends Migration {
                 ->cascadeOnDelete();
 
             $table->string('name');
-            $table->string('location')->nullable();
             $table->string('ip_address');
+            $table->string('status')->default('up'); // up, down, unstable
+            $table->boolean('is_isolated')->default(false);
+            $table->float('latency_ms')->nullable();
+            $table->float('packet_loss')->nullable();
+            $table->timestamp('last_alerted_at')->nullable();
 
             $table->timestamps();
         });

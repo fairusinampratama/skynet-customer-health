@@ -12,9 +12,10 @@ class Customer extends Model
     protected $fillable = [
         'area_id',
         'name',
-        'location',
         'ip_address',
         'status',
+        'latency_ms',
+        'packet_loss',
         'is_isolated',
         'last_alerted_at',
     ];
@@ -38,5 +39,25 @@ class Customer extends Model
     {
         return $this->hasOne(HealthCheck::class)
             ->latest('checked_at');
+    }
+
+    /**
+     * Scope a query to only include customers with issues on a specific date.
+     * 
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @param \Carbon\Carbon|string $date
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeWithIssuesOn($query, $date)
+    {
+        return $query->whereIn('status', ['offline', 'down', 'unstable'])
+            ->where('is_isolated', false)
+            ->with(['area', 'healthChecks' => function ($q) {
+                $q->latest('checked_at')->limit(1);
+            }])
+            ->withCount(['healthChecks' => function ($q) use ($date) {
+                $q->whereDate('checked_at', $date)
+                  ->where('status', 'down');
+            }]);
     }
 }

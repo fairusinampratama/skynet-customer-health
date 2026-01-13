@@ -32,42 +32,38 @@ class SendDailyErrorReport extends Command
     public function handle(WhatsAppService $whatsAppService)
     {
         $date = Carbon::yesterday();
+        $dayName = $date->format('l');
         $formattedDate = $date->format('Y-m-d');
+        $humanReadableDate = $date->format('l, d F Y');
         
-        $this->info("Generating report for {$formattedDate}...");
+        $this->info("Generating report for {$humanReadableDate}...");
 
-        // 1. Fetch data
-        // 1. Fetch data
-        // We fetch customers who are currently marked as 'offline' or 'down'
-        // Since we don't have historical HealthCheck records, we use the current status as a proxy for "needs fix"
-        $customers = Customer::whereIn('status', ['offline', 'down', 'unstable'])
-            ->where('is_isolated', false)
-            ->with(['area', 'healthChecks' => function ($query) {
-                $query->latest('checked_at')->limit(1);
-            }])
-            ->withCount(['healthChecks' => function ($query) {
-                // Count issues from today
-                $query->whereDate('checked_at', Carbon::today())
-                      ->where('status', 'down');
-            }])
-            ->get();
+        // 1. Fetch data using the reusable scope
+        $customers = Customer::withIssuesOn($date)->get();
 
         $this->info("Found {$customers->count()} customers with issues.");
 
         // 2. Generate PDF
         $pdf = Pdf::loadView('reports.daily_errors', [
-            'date' => $formattedDate,
+            'date' => $humanReadableDate,
             'affectedCustomers' => $customers,
         ]);
 
-        $fileName = "daily_error_report_{$formattedDate}.pdf";
+        $fileName = "Daily_Error_Report_{$dayName}_{$formattedDate}.pdf";
         // Whatspie requires a PUBLIC URL. So we must save to the 'public' disk.
         // Ensure you have run 'php artisan storage:link'
         $disk = \Illuminate\Support\Facades\Storage::disk('public');
         $disk->put("reports/{$fileName}", $pdf->output());
 
-        $fileUrl = asset("storage/reports/{$fileName}");
-        $this->info("PDF saved to public disk. URL: {$fileUrl}");
+        // Generate URL to the download route which enforces Content-Disposition
+        // This ensures WhatsApp sees the correct filename
+        $fileUrl = route('reports.download', ['filename' => $fileName]);
+        
+        // Ensure the URL uses the APP_URL (localtunnel in this case)
+        // route() helper usually does this, but forceRootUrl was not set, it might use localhost
+        // For CLI commands, we rely on APP_URL in .env
+        
+        $this->info("PDF saved. Download URL: {$fileUrl}");
 
         // 3. Send via WhatsApp
         $groupId = $this->option('whatsapp_group_id') ?? config('services.whatsapp.audit_group_id', env('WHATSAPP_AUDIT_GROUP_ID'));
@@ -77,7 +73,8 @@ class SendDailyErrorReport extends Command
             $sent = $whatsAppService->sendDocumentToGroup(
                 $groupId,
                 $fileUrl,
-                "Daily Error Report for {$formattedDate}"
+                "Daily Error Report for {$humanReadableDate}",
+                $fileName
             );
 
             if ($sent) {

@@ -10,6 +10,8 @@ class Server extends Model
         'name',
         'ip_address',
         'status',
+        'latency_ms',
+        'packet_loss',
         'last_seen',
     ];
 

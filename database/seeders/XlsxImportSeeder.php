@@ -49,7 +49,7 @@ class XlsxImportSeeder extends Seeder
                     // Mapping: name (0), remote_address (1), lokasi (2), router (3)
                     $name = trim((string)($data[0] ?? ''));
                     $ip = trim((string)($data[1] ?? ''));
-                    $location = trim((string)($data[2] ?? ''));
+                    // $location = trim((string)($data[2] ?? '')); // Unused
                     $areaName = trim((string)($data[3] ?? ''));
 
                     if (empty($name) || empty($ip)) continue;
@@ -64,11 +64,6 @@ class XlsxImportSeeder extends Seeder
                          $areaName = ucfirst($areaName);
                     }
 
-                    // Fallback: If location is empty, use Area Name (Router)
-                    if (empty($location)) {
-                        $location = $areaName;
-                    }
-
                     $area = Area::firstOrCreate(['name' => $areaName]);
 
                     // Create Customer (update if exists by IP? Or name? Assuming new import)
@@ -77,7 +72,6 @@ class XlsxImportSeeder extends Seeder
                         [
                             'area_id' => $area->id,
                             'name' => $name,
-                            'location' => $location,
                             'status' => 'up',
                         ]
                     );

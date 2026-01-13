@@ -36,7 +36,7 @@ class WhatsAppService
      * @param string $caption
      * @return bool
      */
-    public function sendDocumentToGroup(string $groupId, string $fileUrl, string $caption = ''): bool
+    public function sendDocumentToGroup(string $groupId, string $fileUrl, string $caption = '', string $filename = null): bool
     {
         if (!$this->token || !$this->device) {
             Log::warning('WhatsApp Service: Token or Device ID not configured.');
@@ -53,7 +53,10 @@ class WhatsAppService
                     'device' => $this->device,
                     'type' => 'file',
                     'params' => [
-                        'document' => ['url' => $fileUrl], // Changed from string to object based on error log
+                        'document' => [
+                            'url' => $fileUrl,
+                            // 'filename' => $filename, // Removed as it causes API error
+                        ], 
                         'caption' => $caption,
                     ]
                 ]);
