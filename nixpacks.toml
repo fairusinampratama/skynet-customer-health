@@ -20,10 +20,14 @@ nixPkgs = [
     "npm-9_x"
 ]
 
-[phases.build]
+[phases.install]
 cmds = [
     "composer install --no-dev --optimize-autoloader --no-interaction",
-    "npm install",
+    "npm install"
+]
+
+[phases.build]
+cmds = [
     "npm run build",
     "php artisan config:cache",
     "php artisan event:cache",
