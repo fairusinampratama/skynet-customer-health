@@ -76,8 +76,8 @@
                                         </div>
                                     </td>
                                     <td class="px-6 py-5 text-center">
-                                        <span class="font-mono font-bold {{ $record->latestHealth?->packet_loss > 0 ? 'text-danger-600' : 'text-gray-400' }}">
-                                            {{ $record->latestHealth?->packet_loss ?? 0 }}%
+                                        <span class="font-mono font-bold {{ $record->packet_loss > 0 ? 'text-danger-600' : 'text-gray-400' }}">
+                                            {{ $record->packet_loss ?? 0 }}%
                                         </span>
                                     </td>
                                 </tr>

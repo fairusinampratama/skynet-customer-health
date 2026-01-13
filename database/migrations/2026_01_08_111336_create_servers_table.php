@@ -16,6 +16,8 @@ return new class extends Migration
             $table->string('name');
             $table->string('ip_address')->unique();
             $table->string('status')->default('up'); // up, down, unstable
+            $table->float('latency_ms')->nullable();
+            $table->float('packet_loss')->nullable();
             $table->timestamp('last_seen')->nullable();
             $table->timestamps();
             

@@ -31,6 +31,18 @@ class ServersTable
                         'unstable' => 'warning',
                         default => 'gray',
                     }),
+                TextColumn::make('latency_ms')
+                    ->label('Latency')
+                    ->suffix(' ms')
+                    ->numeric()
+                    ->sortable()
+                    ->color(fn ($state) => $state > 100 ? 'warning' : 'success'),
+                TextColumn::make('packet_loss')
+                    ->label('Packet Loss')
+                    ->suffix('%')
+                    ->numeric()
+                    ->sortable()
+                    ->color(fn ($state) => $state > 0 ? 'danger' : 'gray'),
                 TextColumn::make('last_seen')
                     ->dateTime()
                     ->sortable()

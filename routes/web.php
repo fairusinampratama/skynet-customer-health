@@ -1,6 +1,8 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\TvController;
+use Illuminate\Support\Facades\Storage;
 
 Route::get('/', function () {
     return redirect('/admin');
@@ -10,8 +12,14 @@ Route::get('/login', function () {
     return redirect()->route('filament.admin.auth.login');
 })->name('login');
 
-use App\Http\Controllers\TvController;
-
 Route::get('/tv/areas', [TvController::class, 'areas']);
 Route::get('/tv/servers', [TvController::class, 'servers']);
 Route::get('/tv/downtime', [TvController::class, 'downtime']);
+
+// Route to serve report files with specific filename headers
+Route::get('/reports/download/{filename}', function ($filename) {
+    if (!Storage::disk('public')->exists("reports/$filename")) {
+        abort(404);
+    }
+    return Storage::disk('public')->download("reports/$filename");
+})->name('reports.download');

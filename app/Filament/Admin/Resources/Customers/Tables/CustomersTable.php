@@ -52,13 +52,13 @@ class CustomersTable
                             : null
                     )
                     ->color(fn (string $state): string => $state !== '-' ? 'danger' : 'gray'),
-                TextColumn::make('latestHealth.latency_ms')
+                TextColumn::make('latency_ms')
                     ->label('Latency')
                     ->suffix(' ms')
                     ->numeric()
                     ->sortable()
                     ->color(fn ($state) => $state > 100 ? 'warning' : 'success'),
-                TextColumn::make('latestHealth.packet_loss')
+                TextColumn::make('packet_loss')
                     ->label('Packet Loss')
                     ->suffix('%')
                     ->numeric()
@@ -69,7 +69,7 @@ class CustomersTable
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('latestHealth.checked_at')
+                TextColumn::make('updated_at')
                     ->label('Last Check')
                     ->dateTime()
                     ->sortable(),

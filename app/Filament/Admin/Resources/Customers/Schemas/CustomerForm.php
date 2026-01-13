@@ -19,8 +19,6 @@ class CustomerForm
                 TextInput::make('name')
                     ->required()
                     ->maxLength(255),
-                TextInput::make('location')
-                    ->maxLength(255),
                 TextInput::make('ip_address')
                     ->required()
                     ->ipv4(),

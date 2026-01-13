@@ -30,13 +30,21 @@ class HealthCheckCommand extends Command
      */
     public function handle()
     {
-        $this->checkCustomers();
-        $this->checkServers();
+        $shouldLogHistory = now()->minute === 0;
+
+        if ($shouldLogHistory) {
+             $this->info('Hourly check: Updating real-time status AND logging to history.');
+        } else {
+             $this->info('Real-time check: Updating status only (History skipped).');
+        }
+
+        $this->checkCustomers($shouldLogHistory);
+        $this->checkServers($shouldLogHistory);
         
         $this->info('Health check completed for all systems.');
     }
 
-    protected function checkServers()
+    protected function checkServers($shouldLogHistory = false)
     {
         $this->info('Starting Server Health Check...');
         $servers = \App\Models\Server::all();
@@ -45,7 +53,7 @@ class HealthCheckCommand extends Command
         $chunkSize = 50; // Smaller chunk for critical infra
 
         if (env('SIMULATE_HEALTH_CHECKS', false)) {
-            $servers->each(function ($server) {
+            $servers->each(function ($server) use ($shouldLogHistory) {
                 // Simulation: 95% UP
                 $rand = rand(1, 100);
                 if ($rand <= 95) {
@@ -58,15 +66,19 @@ class HealthCheckCommand extends Command
                     $packetLoss = 100;
                 }
 
-                $server->healthChecks()->create([
-                    'status' => $status,
-                    'latency_ms' => $latency,
-                    'packet_loss' => $packetLoss,
-                    'checked_at' => now(),
-                ]);
+                if ($shouldLogHistory) {
+                    $server->healthChecks()->create([
+                        'status' => $status,
+                        'latency_ms' => $latency,
+                        'packet_loss' => $packetLoss,
+                        'checked_at' => now(),
+                    ]);
+                }
 
                 $server->update([
                     'status' => $status,
+                    'latency_ms' => $latency,
+                    'packet_loss' => $packetLoss,
                     'last_seen' => $status === 'up' ? now() : $server->last_seen,
                 ]);
                 
@@ -74,7 +86,7 @@ class HealthCheckCommand extends Command
             });
         } else {
             // Real Ping Logic (Reused Pattern)
-            $servers->chunk($chunkSize)->each(function ($chunk) {
+            $servers->chunk($chunkSize)->each(function ($chunk) use ($shouldLogHistory) {
                 $running = [];
                 $isWindows = PHP_OS_FAMILY === 'Windows';
                 
@@ -120,15 +132,19 @@ class HealthCheckCommand extends Command
                         $status = 'unstable';
                     }
     
-                    $server->healthChecks()->create([
-                        'status' => $status,
-                        'latency_ms' => $latency,
-                        'packet_loss' => $packetLoss,
-                        'checked_at' => now(),
-                    ]);
+                    if ($shouldLogHistory) {
+                        $server->healthChecks()->create([
+                            'status' => $status,
+                            'latency_ms' => $latency,
+                            'packet_loss' => $packetLoss,
+                            'checked_at' => now(),
+                        ]);
+                    }
     
                     $server->update([
                         'status' => $status,
+                        'latency_ms' => $latency,
+                        'packet_loss' => $packetLoss,
                         'last_seen' => $status === 'up' ? now() : $server->last_seen,
                     ]);
                     
@@ -139,7 +155,7 @@ class HealthCheckCommand extends Command
         $this->output->progressFinish();
     }
 
-    protected function checkCustomers()
+    protected function checkCustomers($shouldLogHistory = false)
     {
         $this->info('Starting Customer Health Check...');
         $customers = Customer::all();
@@ -151,7 +167,7 @@ class HealthCheckCommand extends Command
         
         if (env('SIMULATE_HEALTH_CHECKS', false)) {
             $this->info('Running in SIMULATION MODE.');
-            $customers->chunk($chunkSize)->each(function ($chunk) {
+            $customers->chunk($chunkSize)->each(function ($chunk) use ($shouldLogHistory) {
                 foreach ($chunk as $customer) {
                     // Random simulation (weighted)
                     $rand = rand(1, 100);
@@ -173,11 +189,19 @@ class HealthCheckCommand extends Command
                         $packetLoss = 100;
                     }
  
-                    $customer->healthChecks()->create([
-                        'status' => $status,
+                    if ($shouldLogHistory) {
+                        $customer->healthChecks()->create([
+                            'status' => $status,
+                            'latency_ms' => $latency,
+                            'packet_loss' => $packetLoss,
+                            'checked_at' => now(),
+                        ]);
+                    }
+                    
+                    // Always cache latest metrics on the customer model
+                    $customer->update([
                         'latency_ms' => $latency,
                         'packet_loss' => $packetLoss,
-                        'checked_at' => now(),
                     ]);
  
                     $this->updateCustomerStatus($customer, $status);
@@ -186,7 +210,7 @@ class HealthCheckCommand extends Command
             });
         } else {
             // Real Ping Logic
-            $customers->chunk($chunkSize)->each(function ($chunk) {
+            $customers->chunk($chunkSize)->each(function ($chunk) use ($shouldLogHistory) {
                 $running = [];
                 $isWindows = PHP_OS_FAMILY === 'Windows';
                 
@@ -242,11 +266,19 @@ class HealthCheckCommand extends Command
                         $status = 'unstable';
                     }
     
-                    $customer->healthChecks()->create([
-                        'status' => $status,
+                    if ($shouldLogHistory) {
+                        $customer->healthChecks()->create([
+                            'status' => $status,
+                            'latency_ms' => $latency,
+                            'packet_loss' => $packetLoss,
+                            'checked_at' => now(),
+                        ]);
+                    }
+                    
+                    // Always cache latest metrics on the customer model
+                    $customer->update([
                         'latency_ms' => $latency,
                         'packet_loss' => $packetLoss,
-                        'checked_at' => now(),
                     ]);
     
                     $this->updateCustomerStatus($customer, $status);

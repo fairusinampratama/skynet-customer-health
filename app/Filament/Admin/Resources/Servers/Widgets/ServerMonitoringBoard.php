@@ -33,7 +33,7 @@ class ServerMonitoringBoard extends Widget
                 'ip_address' => $server->ip_address,
                 'status' => $server->status,
                 'last_seen' => $server->last_seen,
-                'latency' => $server->healthChecks()->latest('checked_at')->value('latency_ms'),
+                'latency' => $server->latency_ms,
             ];
         });
     }
