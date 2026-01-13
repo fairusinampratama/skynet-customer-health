@@ -45,6 +45,7 @@ class AdminPanelProvider extends PanelProvider
                 // Widgets\AccountWidget::class,
                 // Widgets\FilamentInfoWidget::class,
             ])
+            ->favicon(asset('favicon.png'))
             ->sidebarCollapsibleOnDesktop()
             ->middleware([
                 EncryptCookies::class,
