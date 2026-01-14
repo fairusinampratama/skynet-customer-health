@@ -73,7 +73,7 @@ class SendDailyErrorReport extends Command
             $sent = $whatsAppService->sendDocumentToGroup(
                 $groupId,
                 $fileUrl,
-                "Daily Error Report for {$humanReadableDate}",
+                "Daily Error Report for {$humanReadableDate}\n\nSender: Skynet - NOC",
                 $fileName
             );
 
