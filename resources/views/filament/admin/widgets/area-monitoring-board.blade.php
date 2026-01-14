@@ -170,7 +170,7 @@
                             $isWallboard = $displayMode === 'wallboard';
                         @endphp
                         <a href="{{ route('filament.admin.resources.areas.edit', $area->id) }}" 
-                           class="flex flex-col h-full relative {{ $isWallboard ? 'p-2' : 'p-5' }} bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm hover:shadow-md hover:border-primary-200 dark:hover:border-primary-900 transition-all duration-300 group overflow-hidden">
+                           class="flex flex-col h-full relative {{ $isWallboard ? 'p-2' : 'p-5' }} bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 ring-1 ring-gray-950/5 dark:ring-white/10 rounded-xl shadow-md hover:shadow-lg hover:border-primary-200 dark:hover:border-primary-900 transition-all duration-300 group overflow-hidden">
                             
                             {{-- Top Row --}}
                             <div class="flex justify-between items-start {{ $isWallboard ? 'mb-1' : 'mb-4 sm:mb-6' }} gap-2">

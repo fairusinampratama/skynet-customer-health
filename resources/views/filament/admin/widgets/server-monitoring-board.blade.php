@@ -127,7 +127,7 @@
                     @foreach($servers as $server)
                         @php $isWallboard = $displayMode === 'wallboard'; @endphp
                         <a href="{{ route('filament.admin.resources.servers.edit', $server->id) }}" 
-                            class="flex flex-col {{ $isWallboard ? 'p-2' : 'p-5' }} bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm hover:shadow-md hover:border-primary-200 dark:hover:border-primary-900 transition-all duration-300 group overflow-hidden">
+                            class="flex flex-col {{ $isWallboard ? 'p-2' : 'p-5' }} bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 ring-1 ring-gray-950/5 dark:ring-white/10 rounded-xl shadow-md hover:shadow-lg hover:border-primary-200 dark:hover:border-primary-900 transition-all duration-300 group overflow-hidden">
                             
                             {{-- Server Name --}}
                             <h3 class="{{ $isWallboard ? 'text-base' : 'text-lg sm:text-xl' }} font-bold text-gray-900 dark:text-white truncate uppercase {{ $isWallboard ? 'mb-0.5' : 'mb-2' }}" title="{{ $server->name }}">
