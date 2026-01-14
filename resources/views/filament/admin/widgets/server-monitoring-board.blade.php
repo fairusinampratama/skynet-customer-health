@@ -21,8 +21,9 @@
 
             <div class="flex p-1 bg-gray-100 dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800">
                 @foreach([
-                    'table' => ['label' => 'List', 'icon' => 'heroicon-m-list-bullet'],
-                    'card'  => ['label' => 'Grid', 'icon' => 'heroicon-m-squares-2x2'],
+                    'table'     => ['label' => 'List',      'icon' => 'heroicon-m-list-bullet'],
+                    'card'      => ['label' => 'Grid',      'icon' => 'heroicon-m-squares-2x2'],
+                    'wallboard' => ['label' => 'Wallboard', 'icon' => 'heroicon-m-view-columns'],
                 ] as $mode => $data)
                     <button wire:click="$dispatch('set-server-view-mode', { mode: '{{ $mode }}' })" 
                         class="flex items-center gap-2 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all duration-200 
@@ -88,25 +89,43 @@
                     </table>
                 </div>
 
-            @elseif($displayMode === 'card')
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+            @elseif($displayMode === 'card' || $displayMode === 'wallboard')
+                @php
+                    // Wallboard Dynamic Grid Calculation
+                    $gridStyle = '';
+                    $wallboardClass = '';
+                    
+                    if ($displayMode === 'wallboard') {
+                        $count = $servers->count();
+                        $ratio = 1.8;
+                        $rows = max(1, ceil(sqrt($count / $ratio)));
+                        $cols = ceil($count / $rows);
+                        
+                        $gridStyle = "grid-template-columns: repeat($cols, minmax(0, 1fr)); grid-template-rows: repeat($rows, minmax(0, 1fr));";
+                        $wallboardClass = 'h-[calc(100vh-15.5rem)] overflow-hidden';
+                    }
+                @endphp
+
+                <div class="grid gap-4 sm:gap-6 {{ $displayMode === 'wallboard' ? $wallboardClass : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' }}"
+                     style="{{ $gridStyle }}">
                     @foreach($servers as $server)
+                        @php $isWallboard = $displayMode === 'wallboard'; @endphp
                         <a href="{{ route('filament.admin.resources.servers.edit', $server->id) }}" 
-                            class="flex flex-col p-5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm hover:shadow-md hover:border-primary-200 dark:hover:border-primary-900 transition-all duration-300 group">
+                            class="flex flex-col {{ $isWallboard ? 'p-3' : 'p-5' }} bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm hover:shadow-md hover:border-primary-200 dark:hover:border-primary-900 transition-all duration-300 group overflow-hidden">
                             
                             {{-- Server Name --}}
-                            <h3 class="text-lg sm:text-xl font-bold text-gray-900 dark:text-white truncate uppercase mb-2" title="{{ $server->name }}">
+                            <h3 class="{{ $isWallboard ? 'text-base' : 'text-lg sm:text-xl' }} font-bold text-gray-900 dark:text-white truncate uppercase {{ $isWallboard ? 'mb-1' : 'mb-2' }}" title="{{ $server->name }}">
                                 {{ $server->name }}
                             </h3>
                             
                             {{-- IP Address --}}
-                            <p class="text-sm font-mono text-gray-500 dark:text-gray-400 mb-4">
+                            <p class="{{ $isWallboard ? 'text-xs' : 'text-sm' }} font-mono text-gray-500 dark:text-gray-400 {{ $isWallboard ? 'mb-2' : 'mb-4' }}">
                                 {{ $server->ip_address }}
                             </p>
                             
                             {{-- Status Badge --}}
-                            <div class="flex items-center justify-between mb-4">
-                                <span class="inline-flex items-center rounded-md px-3 py-1.5 text-sm font-bold 
+                            <div class="flex items-center justify-between {{ $isWallboard ? 'mb-2' : 'mb-4' }}">
+                                <span class="inline-flex items-center rounded-md px-3 py-1.5 {{ $isWallboard ? 'text-xs' : 'text-sm' }} font-bold 
                                     {{ $server->status === 'up' ? 'bg-success-50 text-success-700 dark:bg-success-400/10 dark:text-success-400 ring-1 ring-inset ring-success-600/20' : '' }}
                                     {{ $server->status === 'down' ? 'bg-danger-50 text-danger-700 dark:bg-danger-400/10 dark:text-danger-400 ring-1 ring-inset ring-danger-600/20' : '' }}
                                     {{ $server->status === 'unstable' ? 'bg-warning-50 text-warning-700 dark:bg-warning-400/10 dark:text-warning-400 ring-1 ring-inset ring-warning-600/20' : '' }}">
@@ -114,7 +133,7 @@
                                 </span>
                                 
                                 @if($server->latency)
-                                    <span class="text-lg font-bold font-mono {{ $server->latency > 100 ? 'text-warning-600' : 'text-success-600' }}">
+                                    <span class="{{ $isWallboard ? 'text-base' : 'text-lg' }} font-bold font-mono {{ $server->latency > 100 ? 'text-warning-600' : 'text-success-600' }}">
                                         {{ round($server->latency) }}ms
                                     </span>
                                 @endif
@@ -122,7 +141,7 @@
                             
                             {{-- Last Seen --}}
                             <div class="mt-auto pt-3 border-t border-gray-100 dark:border-gray-800">
-                                <p class="text-xs text-gray-500 dark:text-gray-400">
+                                <p class="{{ $isWallboard ? 'text-[10px]' : 'text-xs' }} text-gray-500 dark:text-gray-400">
                                     <span class="font-semibold">Last seen:</span> {{ $server->last_seen ? $server->last_seen->diffForHumans() : 'Never' }}
                                 </p>
                             </div>
