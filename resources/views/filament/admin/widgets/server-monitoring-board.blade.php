@@ -130,33 +130,35 @@
                             class="flex flex-col {{ $isWallboard ? 'p-2' : 'p-5' }} bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm hover:shadow-md hover:border-primary-200 dark:hover:border-primary-900 transition-all duration-300 group overflow-hidden">
                             
                             {{-- Server Name --}}
-                            <h3 class="{{ $isWallboard ? 'text-sm' : 'text-lg sm:text-xl' }} font-bold text-gray-900 dark:text-white truncate uppercase {{ $isWallboard ? 'mb-0.5' : 'mb-2' }}" title="{{ $server->name }}">
+                            <h3 class="{{ $isWallboard ? 'text-base' : 'text-lg sm:text-xl' }} font-bold text-gray-900 dark:text-white truncate uppercase {{ $isWallboard ? 'mb-0.5' : 'mb-2' }}" title="{{ $server->name }}">
                                 {{ $server->name }}
                             </h3>
                             
                             {{-- IP Address --}}
-                            <p class="{{ $isWallboard ? 'text-[10px]' : 'text-sm' }} font-mono text-gray-500 dark:text-gray-400 {{ $isWallboard ? 'mb-1' : 'mb-4' }}">
+                            <p class="{{ $isWallboard ? 'text-xs' : 'text-sm' }} font-mono text-gray-500 dark:text-gray-400">
                                 {{ $server->ip_address }}
                             </p>
                             
-                            {{-- Status Badge --}}
-                            <div class="flex items-center justify-between {{ $isWallboard ? 'mb-1' : 'mb-4' }}">
-                                <span class="inline-flex items-center rounded-md px-3 py-1.5 {{ $isWallboard ? 'text-[10px] px-1.5 py-0.5' : 'text-sm' }} font-bold 
-                                    {{ $server->status === 'up' ? 'bg-success-50 text-success-700 dark:bg-success-400/10 dark:text-success-400 ring-1 ring-inset ring-success-600/20' : '' }}
-                                    {{ $server->status === 'down' ? 'bg-danger-50 text-danger-700 dark:bg-danger-400/10 dark:text-danger-400 ring-1 ring-inset ring-danger-600/20' : '' }}
-                                    {{ $server->status === 'unstable' ? 'bg-warning-50 text-warning-700 dark:bg-warning-400/10 dark:text-warning-400 ring-1 ring-inset ring-warning-600/20' : '' }}">
-                                    {{ strtoupper($server->status) }}
-                                </span>
-                                
-                                @if($server->latency)
-                                    <span class="{{ $isWallboard ? 'text-sm' : 'text-lg' }} font-bold font-mono {{ $server->latency > 100 ? 'text-warning-600' : 'text-success-600' }}">
-                                        {{ round($server->latency) }}ms
+                            {{-- Status & Latency (Centered) --}}
+                            <div class="flex-1 flex flex-col justify-center py-2">
+                                <div class="flex items-center justify-between">
+                                    <span class="inline-flex items-center rounded-md px-2 py-1 {{ $isWallboard ? 'text-xs' : 'text-sm' }} font-bold 
+                                        {{ $server->status === 'up' ? 'bg-success-50 text-success-700 dark:bg-success-400/10 dark:text-success-400 ring-1 ring-inset ring-success-600/20' : '' }}
+                                        {{ $server->status === 'down' ? 'bg-danger-50 text-danger-700 dark:bg-danger-400/10 dark:text-danger-400 ring-1 ring-inset ring-danger-600/20' : '' }}
+                                        {{ $server->status === 'unstable' ? 'bg-warning-50 text-warning-700 dark:bg-warning-400/10 dark:text-warning-400 ring-1 ring-inset ring-warning-600/20' : '' }}">
+                                        {{ strtoupper($server->status) }}
                                     </span>
-                                @endif
+                                    
+                                    @if($server->latency)
+                                        <span class="{{ $isWallboard ? 'text-lg' : 'text-lg' }} font-bold font-mono {{ $server->latency > 100 ? 'text-warning-600' : 'text-success-600' }}">
+                                            {{ round($server->latency) }}ms
+                                        </span>
+                                    @endif
+                                </div>
                             </div>
                             
                             {{-- Last Seen --}}
-                            <div class="mt-auto pt-3 border-t border-gray-100 dark:border-gray-800">
+                            <div class="mt-auto pt-2 border-t border-gray-100 dark:border-gray-800">
                                 <p class="{{ $isWallboard ? 'text-[10px]' : 'text-xs' }} text-gray-500 dark:text-gray-400">
                                     <span class="font-semibold">Last seen:</span> {{ $server->last_seen ? $server->last_seen->diffForHumans() : 'Never' }}
                                 </p>
