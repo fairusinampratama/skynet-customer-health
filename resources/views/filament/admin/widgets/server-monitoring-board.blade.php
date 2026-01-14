@@ -101,8 +101,8 @@
                         $rows = max(1, ceil(sqrt($count / $ratio)));
                         $cols = ceil($count / $rows);
                         
-                        $gridStyle = "grid-template-columns: repeat($cols, minmax(0, 1fr)); grid-template-rows: repeat($rows, minmax(0, 1fr));";
-                        $wallboardClass = 'h-[calc(100vh-15.5rem)] overflow-hidden';
+                        $gridStyle = "grid-template-columns: repeat($cols, minmax(0, 1fr)); grid-template-rows: repeat($rows, minmax(130px, 1fr));";
+                        $wallboardClass = 'h-[calc(100vh-15.5rem)] overflow-y-auto';
                     }
                 @endphp
 
