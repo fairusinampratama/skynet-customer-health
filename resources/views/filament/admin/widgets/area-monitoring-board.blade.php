@@ -162,7 +162,7 @@
                             this.height = Math.max(available, 200) + 'px';
                         }
                     }"
-                    class="grid gap-4 sm:gap-6 {{ $displayMode === 'wallboard' ? $wallboardClass : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' }}" 
+                    class="grid gap-4 sm:gap-6 {{ $displayMode === 'wallboard' ? $wallboardClass : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 2xl:grid-cols-6' }}" 
                     :style="'{{ $displayMode === 'wallboard' }}' ? (style + ' height: ' + height) : ''">
                     @foreach($this->areas as $area)
                         @php 
@@ -187,9 +187,9 @@
                                 </span>
                             </div>
 
-                            {{-- Stats Row (Conditional) --}}
+                            {{-- Stats Row (Unified Layout with Responsive Sizing) --}}
                             @if($area->down_count > 0)
-                                {{-- SCENARIO B: Issues Detected (Split View) --}}
+                                {{-- Issues Detected (Split View) --}}
                                 <div class="grid grid-cols-2 gap-2 {{ $isWallboard ? 'mb-2' : 'gap-3 sm:gap-4 mb-4 sm:mb-6' }}">
                                     <div class="flex flex-col {{ $isWallboard ? 'p-2' : 'p-3 sm:p-4' }} rounded-xl bg-danger-50 dark:bg-danger-900/10 border border-danger-100 dark:border-danger-900/20">
                                         <span class="text-xs {{ $isWallboard ? '' : 'sm:text-sm' }} font-bold text-danger-600/80 dark:text-danger-400 uppercase tracking-wider mb-1">Offline</span>
@@ -205,8 +205,8 @@
                                     </div>
                                 </div>
                             @else
-                                {{-- SCENARIO A: All Good (Unified View) --}}
-                                <div class="flex-1 flex flex-col items-center justify-center {{ $isWallboard ? 'py-1 mb-2' : 'py-4 mb-4 sm:mb-6' }} border-y border-dashed border-success-200 dark:border-success-900/30 bg-success-50/30 dark:bg-success-900/5 rounded-lg">
+                                {{-- All Good (Unified View) --}}
+                                <div class="flex-1 flex flex-col items-center justify-center {{ $isWallboard ? 'py-2 mb-2' : 'py-4 mb-4 sm:mb-6' }} border-y border-dashed border-success-200 dark:border-success-900/30 bg-success-50/30 dark:bg-success-900/5 rounded-lg">
                                     <span class="{{ $isWallboard ? 'text-3xl' : 'text-5xl sm:text-7xl' }} font-black text-success-600 dark:text-success-400 tracking-tighter drop-shadow-sm">
                                         {{ $area->total_count }}
                                     </span>
@@ -220,8 +220,8 @@
                             <div class="w-full h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden {{ $isWallboard ? 'mb-2' : 'mb-3' }}">
                                 <div class="h-full rounded-full {{ $status['bar'] }}" style="width: {{ $area->health_score }}%"></div>
                             </div>
-                            
-                            {{-- Footer --}}
+
+                            {{-- Footer (Always Visible, Scaled) --}}
                             @if($area->down_count > 0)
                                 <div class="mt-auto flex items-center justify-center gap-2 text-xs {{ $isWallboard ? '' : 'sm:text-sm' }} font-bold text-danger-600 dark:text-danger-400 bg-danger-50 dark:bg-danger-900/20 py-2 px-3 rounded-lg">
                                     <x-filament::icon icon="heroicon-m-exclamation-triangle" class="w-4 h-4 {{ $isWallboard ? '' : 'sm:w-5 sm:h-5' }}" />
