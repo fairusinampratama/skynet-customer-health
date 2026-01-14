@@ -21,9 +21,10 @@
 
             <div class="flex p-1 bg-gray-100 dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800">
                 @foreach([
-                    'table' => ['label' => 'List', 'icon' => 'heroicon-m-list-bullet'],
-                    'card'  => ['label' => 'Grid', 'icon' => 'heroicon-m-squares-2x2'],
-                    'chart' => ['label' => 'Graph', 'icon' => 'heroicon-m-chart-bar'],
+                    'table'     => ['label' => 'List',      'icon' => 'heroicon-m-list-bullet'],
+                    'card'      => ['label' => 'Grid',      'icon' => 'heroicon-m-squares-2x2'],
+                    'wallboard' => ['label' => 'Wallboard', 'icon' => 'heroicon-m-view-columns'],
+                    'chart'     => ['label' => 'Graph',     'icon' => 'heroicon-m-chart-bar'],
                 ] as $mode => $data)
                     <button wire:click="setMode('{{ $mode }}')" 
                         class="flex items-center gap-2 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all duration-200 
@@ -124,23 +125,48 @@
                     </table>
                 </div>
 
-            @elseif($displayMode === 'card')
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+            @elseif($displayMode === 'card' || $displayMode === 'wallboard')
+                @php
+                    // Wallboard Dynamic Grid Calculation
+                    $gridStyle = '';
+                    $wallboardClass = '';
+                    
+                    if ($displayMode === 'wallboard') {
+                        $count = count($this->areas);
+                        // Calculate optimal Rows x Cols for 16:9 aspect ratio
+                        // Formula: Rows = sqrt(Count / Ratio)
+                        $ratio = 1.8; // Slightly wider than 16:9 to favor width
+                        $rows = max(1, ceil(sqrt($count / $ratio)));
+                        $cols = ceil($count / $rows);
+                        
+                        $gridStyle = "grid-template-columns: repeat($cols, minmax(0, 1fr)); grid-template-rows: repeat($rows, minmax(0, 1fr));";
+                        // Force container to take remaining height (approx 100vh - header - padding)
+                        // Increased buffer from 13rem to 15.5rem to be safe against scrolling
+                        $wallboardClass = 'h-[calc(100vh-15.5rem)] overflow-hidden';
+                    }
+                @endphp
+
+                <div class="grid gap-4 sm:gap-6 {{ $displayMode === 'wallboard' ? $wallboardClass : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' }}" 
+                     style="{{ $gridStyle }}">
                     @foreach($this->areas as $area)
-                        @php $status = $getHealthStatus($area->health_score); @endphp
-                        <a href="{{ route('filament.admin.resources.areas.edit', $area->id) }}" class="flex flex-col h-full relative p-5 bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm hover:shadow-md hover:border-primary-200 dark:hover:border-primary-900 transition-all duration-300 group">
+                        @php 
+                            $status = $getHealthStatus($area->health_score);
+                            $isWallboard = $displayMode === 'wallboard';
+                        @endphp
+                        <a href="{{ route('filament.admin.resources.areas.edit', $area->id) }}" 
+                           class="flex flex-col h-full relative {{ $isWallboard ? 'p-3' : 'p-5' }} bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm hover:shadow-md hover:border-primary-200 dark:hover:border-primary-900 transition-all duration-300 group overflow-hidden">
                             
                             {{-- Top Row --}}
-                            <div class="flex justify-between items-start mb-4 sm:mb-6 gap-2">
+                            <div class="flex justify-between items-start {{ $isWallboard ? 'mb-2' : 'mb-4 sm:mb-6' }} gap-2">
                                 <div class="overflow-hidden">
-                                    <h3 class="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white truncate uppercase" title="{{ $area->name }}">
+                                    <h3 class="{{ $isWallboard ? 'text-base' : 'text-lg sm:text-2xl' }} font-bold text-gray-900 dark:text-white truncate uppercase" title="{{ $area->name }}">
                                         {{ $area->name }}
                                     </h3>
-                                    <p class="text-sm sm:text-base text-gray-500 dark:text-gray-400 mt-1">
+                                    <p class="{{ $isWallboard ? 'text-xs' : 'text-sm sm:text-base' }} text-gray-500 dark:text-gray-400 mt-1">
                                         {{ $area->total_count }} Hosts
                                     </p>
                                 </div>
-                                <span class="inline-flex items-center rounded-md px-2 py-0.5 sm:px-2.5 sm:py-1 text-xs sm:text-sm font-bold ring-1 ring-inset whitespace-nowrap {{ $status['badge'] }}">
+                                <span class="inline-flex items-center rounded-md px-2 py-0.5 {{ $isWallboard ? '' : 'sm:px-2.5 sm:py-1' }} text-xs {{ $isWallboard ? '' : 'sm:text-sm' }} font-bold ring-1 ring-inset whitespace-nowrap {{ $status['badge'] }}">
                                     {{ $area->health_score }}%
                                 </span>
                             </div>
@@ -148,46 +174,46 @@
                             {{-- Stats Row (Conditional) --}}
                             @if($area->down_count > 0)
                                 {{-- SCENARIO B: Issues Detected (Split View) --}}
-                                <div class="grid grid-cols-2 gap-3 sm:gap-4 mb-4 sm:mb-6">
-                                    <div class="flex flex-col p-3 sm:p-4 rounded-xl bg-danger-50 dark:bg-danger-900/10 border border-danger-100 dark:border-danger-900/20">
-                                        <span class="text-xs sm:text-sm font-bold text-danger-600/80 dark:text-danger-400 uppercase tracking-wider mb-1">Offline</span>
-                                        <span class="font-bold text-danger-600 dark:text-danger-500 {{ strlen($area->down_count) > 2 ? 'text-2xl sm:text-4xl' : 'text-3xl sm:text-5xl' }}">
+                                <div class="grid grid-cols-2 gap-2 {{ $isWallboard ? 'mb-2' : 'gap-3 sm:gap-4 mb-4 sm:mb-6' }}">
+                                    <div class="flex flex-col {{ $isWallboard ? 'p-2' : 'p-3 sm:p-4' }} rounded-xl bg-danger-50 dark:bg-danger-900/10 border border-danger-100 dark:border-danger-900/20">
+                                        <span class="text-xs {{ $isWallboard ? '' : 'sm:text-sm' }} font-bold text-danger-600/80 dark:text-danger-400 uppercase tracking-wider mb-1">Offline</span>
+                                        <span class="font-bold text-danger-600 dark:text-danger-500 {{ $isWallboard ? 'text-xl' : (strlen($area->down_count) > 2 ? 'text-2xl sm:text-4xl' : 'text-3xl sm:text-5xl') }}">
                                             {{ $area->down_count }}
                                         </span>
                                     </div>
-                                    <div class="flex flex-col p-3 sm:p-4 rounded-xl bg-success-50 dark:bg-success-900/10 border border-success-100 dark:border-success-900/20 text-right">
-                                        <span class="text-xs sm:text-sm font-bold text-success-600/80 dark:text-success-400 uppercase tracking-wider mb-1">Online</span>
-                                        <span class="font-bold text-success-600 dark:text-success-500 {{ strlen($area->up_count) > 2 ? 'text-2xl sm:text-4xl' : 'text-3xl sm:text-5xl' }}">
+                                    <div class="flex flex-col {{ $isWallboard ? 'p-2' : 'p-3 sm:p-4' }} rounded-xl bg-success-50 dark:bg-success-900/10 border border-success-100 dark:border-success-900/20 text-right">
+                                        <span class="text-xs {{ $isWallboard ? '' : 'sm:text-sm' }} font-bold text-success-600/80 dark:text-success-400 uppercase tracking-wider mb-1">Online</span>
+                                        <span class="font-bold text-success-600 dark:text-success-500 {{ $isWallboard ? 'text-xl' : (strlen($area->up_count) > 2 ? 'text-2xl sm:text-4xl' : 'text-3xl sm:text-5xl') }}">
                                             {{ $area->up_count }}
                                         </span>
                                     </div>
                                 </div>
                             @else
                                 {{-- SCENARIO A: All Good (Unified View) --}}
-                                <div class="flex-1 flex flex-col items-center justify-center py-4 mb-4 sm:mb-6 border-y border-dashed border-success-200 dark:border-success-900/30 bg-success-50/30 dark:bg-success-900/5 rounded-lg">
-                                    <span class="text-5xl sm:text-7xl font-black text-success-600 dark:text-success-400 tracking-tighter drop-shadow-sm">
+                                <div class="flex-1 flex flex-col items-center justify-center {{ $isWallboard ? 'py-1 mb-2' : 'py-4 mb-4 sm:mb-6' }} border-y border-dashed border-success-200 dark:border-success-900/30 bg-success-50/30 dark:bg-success-900/5 rounded-lg">
+                                    <span class="{{ $isWallboard ? 'text-3xl' : 'text-5xl sm:text-7xl' }} font-black text-success-600 dark:text-success-400 tracking-tighter drop-shadow-sm">
                                         {{ $area->total_count }}
                                     </span>
-                                    <span class="text-xs sm:text-sm font-bold text-success-600/70 dark:text-success-400/70 uppercase tracking-widest mt-1">
+                                    <span class="text-xs {{ $isWallboard ? '' : 'sm:text-sm' }} font-bold text-success-600/70 dark:text-success-400/70 uppercase tracking-widest mt-1">
                                         Active Hosts
                                     </span>
                                 </div>
                             @endif
 
                             {{-- Progress Bar --}}
-                            <div class="w-full h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden mb-3">
+                            <div class="w-full h-1.5 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden {{ $isWallboard ? 'mb-2' : 'mb-3' }}">
                                 <div class="h-full rounded-full {{ $status['bar'] }}" style="width: {{ $area->health_score }}%"></div>
                             </div>
                             
                             {{-- Footer --}}
                             @if($area->down_count > 0)
-                                <div class="mt-auto flex items-center justify-center gap-2 text-xs sm:text-sm font-bold text-danger-600 dark:text-danger-400 bg-danger-50 dark:bg-danger-900/20 py-2 px-3 rounded-lg">
-                                    <x-filament::icon icon="heroicon-m-exclamation-triangle" class="w-4 h-4 sm:w-5 sm:h-5" />
+                                <div class="mt-auto flex items-center justify-center gap-2 text-xs {{ $isWallboard ? '' : 'sm:text-sm' }} font-bold text-danger-600 dark:text-danger-400 bg-danger-50 dark:bg-danger-900/20 py-2 px-3 rounded-lg">
+                                    <x-filament::icon icon="heroicon-m-exclamation-triangle" class="w-4 h-4 {{ $isWallboard ? '' : 'sm:w-5 sm:h-5' }}" />
                                     {{ $area->down_count }} Offline
                                 </div>
                             @else
-                                <div class="mt-auto flex items-center justify-center gap-2 text-xs sm:text-sm font-bold text-success-600 dark:text-success-400 bg-success-50 dark:bg-success-900/20 py-2 px-3 rounded-lg">
-                                    <x-filament::icon icon="heroicon-m-check-circle" class="w-4 h-4 sm:w-5 sm:h-5" />
+                                <div class="mt-auto flex items-center justify-center gap-2 text-xs {{ $isWallboard ? '' : 'sm:text-sm' }} font-bold text-success-600 dark:text-success-400 bg-success-50 dark:bg-success-900/20 py-2 px-3 rounded-lg">
+                                    <x-filament::icon icon="heroicon-m-check-circle" class="w-4 h-4 {{ $isWallboard ? '' : 'sm:w-5 sm:h-5' }}" />
                                     100% Online
                                 </div>
                             @endif
