@@ -19,22 +19,46 @@
                 </div>
             </div>
 
-            <div class="flex p-1 bg-gray-100 dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800">
-                @foreach([
-                    'table'     => ['label' => 'List',      'icon' => 'heroicon-m-list-bullet'],
-                    'card'      => ['label' => 'Grid',      'icon' => 'heroicon-m-squares-2x2'],
-                    'wallboard' => ['label' => 'Wallboard', 'icon' => 'heroicon-m-view-columns'],
-                ] as $mode => $data)
-                    <button wire:click="$dispatch('set-server-view-mode', { mode: '{{ $mode }}' })" 
-                        class="flex items-center gap-2 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all duration-200 
-                        {{ $displayMode === $mode 
-                            ? 'bg-white dark:bg-gray-800 text-primary-600 dark:text-primary-400 shadow-sm ring-1 ring-gray-950/5 dark:ring-white/10' 
-                            : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-50/50 dark:hover:bg-gray-800/50' 
-                        }}">
-                        <x-filament::icon icon="{{ $data['icon'] }}" class="w-4 h-4" />
-                        <span class="hidden sm:inline">{{ $data['label'] }}</span>
-                    </button>
-                @endforeach
+            <div class="flex flex-col items-end gap-2">
+                <div class="flex p-1 bg-gray-100 dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800">
+                    @foreach([
+                        'table'     => ['label' => 'List',      'icon' => 'heroicon-m-list-bullet'],
+                        'card'      => ['label' => 'Grid',      'icon' => 'heroicon-m-squares-2x2'],
+                        'wallboard' => ['label' => 'Wallboard', 'icon' => 'heroicon-m-view-columns'],
+                    ] as $mode => $data)
+                        <button wire:click="$dispatch('set-server-view-mode', { mode: '{{ $mode }}' })" 
+                            class="flex items-center gap-2 px-3 py-1.5 text-xs font-semibold rounded-lg transition-all duration-200 
+                            {{ $displayMode === $mode 
+                                ? 'bg-white dark:bg-gray-800 text-primary-600 dark:text-primary-400 shadow-sm ring-1 ring-gray-950/5 dark:ring-white/10' 
+                                : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200 hover:bg-gray-50/50 dark:hover:bg-gray-800/50' 
+                            }}">
+                            <x-filament::icon icon="{{ $data['icon'] }}" class="w-4 h-4" />
+                            <span class="hidden sm:inline">{{ $data['label'] }}</span>
+                        </button>
+                    @endforeach
+                </div>
+                <div 
+                    wire:key="{{ now()->timestamp }}"
+                    x-data="{ 
+                        seconds: 0,
+                        init() { setInterval(() => this.seconds++, 1000) },
+                        get stale() { return this.seconds > 35 }
+                    }"
+                    class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-800 shadow-sm ring-1 ring-gray-950/5 dark:ring-white/5"
+                    :class="{ 'border-danger-200 dark:border-danger-900 bg-danger-50 dark:bg-danger-900/10': stale }">
+                    
+                    <span class="relative flex h-2.5 w-2.5">
+                      <span class="animate-ping absolute inline-flex h-full w-full rounded-full opacity-75" 
+                            :class="stale ? 'bg-danger-400' : 'bg-success-400'"></span>
+                      <span class="relative inline-flex rounded-full h-2.5 w-2.5"
+                            :class="stale ? 'bg-danger-500' : 'bg-success-500'"></span>
+                    </span>
+
+                    <span class="text-xs font-medium" 
+                          :class="stale ? 'text-danger-600 dark:text-danger-400' : 'text-gray-600 dark:text-gray-300'"
+                          x-text="stale ? 'Last Updated: ' + seconds + 's ago' : 'Last Updated: 30s ago'">
+                    </span>
+                </div>
             </div>
         </div>
 
