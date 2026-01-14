@@ -139,30 +139,46 @@
                         $rows = max(1, ceil(sqrt($count / $ratio)));
                         $cols = ceil($count / $rows);
                         
-                        $gridStyle = "grid-template-columns: repeat($cols, minmax(0, 1fr)); grid-template-rows: repeat($rows, minmax(115px, 1fr));";
-                        // Force container to take remaining height (approx 100vh - header - padding)
-                        // Safety: 'overflow-y-auto' ensures that if cards hit the 115px limit, we scroll instead of breaking.
-                        $wallboardClass = 'h-[calc(100vh-15.5rem)] overflow-y-auto';
+                        $gridStyle = "grid-template-columns: repeat($cols, minmax(0, 1fr)); grid-template-rows: repeat($rows, minmax(0, 1fr));";
+                        // Safety: Strict Fit - No scrolling allowed. Cards must shrink.
+                        $wallboardClass = 'overflow-hidden';
                     }
                 @endphp
 
-                <div class="grid gap-4 sm:gap-6 {{ $displayMode === 'wallboard' ? $wallboardClass : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' }}" 
-                     style="{{ $gridStyle }}">
+                <div x-data="{ 
+                        style: '{{ $gridStyle }}',
+                        height: '600px',
+                        init() {
+                            this.calculateHeight();
+                            window.addEventListener('resize', () => this.calculateHeight());
+                            setTimeout(() => this.calculateHeight(), 100);
+                            setTimeout(() => this.calculateHeight(), 500);
+                        },
+                        calculateHeight() {
+                            if ('{{ $displayMode }}' !== 'wallboard') return;
+                            const top = this.$el.getBoundingClientRect().top;
+                            // Strict Fit: Subtract small buffer
+                            const available = window.innerHeight - top - 10;
+                            this.height = Math.max(available, 200) + 'px';
+                        }
+                    }"
+                    class="grid gap-4 sm:gap-6 {{ $displayMode === 'wallboard' ? $wallboardClass : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4' }}" 
+                    :style="'{{ $displayMode === 'wallboard' }}' ? (style + ' height: ' + height) : ''">
                     @foreach($this->areas as $area)
                         @php 
                             $status = $getHealthStatus($area->health_score);
                             $isWallboard = $displayMode === 'wallboard';
                         @endphp
                         <a href="{{ route('filament.admin.resources.areas.edit', $area->id) }}" 
-                           class="flex flex-col h-full relative {{ $isWallboard ? 'p-3' : 'p-5' }} bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm hover:shadow-md hover:border-primary-200 dark:hover:border-primary-900 transition-all duration-300 group overflow-hidden">
+                           class="flex flex-col h-full relative {{ $isWallboard ? 'p-2' : 'p-5' }} bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-xl shadow-sm hover:shadow-md hover:border-primary-200 dark:hover:border-primary-900 transition-all duration-300 group overflow-hidden">
                             
                             {{-- Top Row --}}
-                            <div class="flex justify-between items-start {{ $isWallboard ? 'mb-2' : 'mb-4 sm:mb-6' }} gap-2">
+                            <div class="flex justify-between items-start {{ $isWallboard ? 'mb-1' : 'mb-4 sm:mb-6' }} gap-2">
                                 <div class="overflow-hidden">
-                                    <h3 class="{{ $isWallboard ? 'text-base' : 'text-lg sm:text-2xl' }} font-bold text-gray-900 dark:text-white truncate uppercase" title="{{ $area->name }}">
+                                    <h3 class="{{ $isWallboard ? 'text-sm' : 'text-lg sm:text-2xl' }} font-bold text-gray-900 dark:text-white truncate uppercase" title="{{ $area->name }}">
                                         {{ $area->name }}
                                     </h3>
-                                    <p class="{{ $isWallboard ? 'text-xs' : 'text-sm sm:text-base' }} text-gray-500 dark:text-gray-400 mt-1">
+                                    <p class="{{ $isWallboard ? 'text-[10px]' : 'text-sm sm:text-base' }} text-gray-500 dark:text-gray-400 mt-0.5">
                                         {{ $area->total_count }} Hosts
                                     </p>
                                 </div>
