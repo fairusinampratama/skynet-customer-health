@@ -193,13 +193,13 @@
                                 <div class="flex-1 grid grid-cols-2 gap-2 {{ $isWallboard ? 'mb-2' : 'gap-3 sm:gap-4 mb-4 sm:mb-6' }}">
                                     <div class="flex flex-col justify-center {{ $isWallboard ? 'p-2' : 'p-3 sm:p-4' }} rounded-xl bg-danger-50 dark:bg-danger-900/10 border border-danger-100 dark:border-danger-900/20">
                                         <span class="text-xs {{ $isWallboard ? '' : 'sm:text-sm' }} font-bold text-danger-600/80 dark:text-danger-400 uppercase tracking-wider mb-1">Offline</span>
-                                        <span class="font-bold text-danger-600 dark:text-danger-500 {{ $isWallboard ? 'text-xl' : (strlen($area->down_count) > 2 ? 'text-2xl sm:text-4xl' : 'text-3xl sm:text-5xl') }}">
+                                        <span class="font-bold text-danger-600 dark:text-danger-500 {{ $isWallboard ? 'text-2xl' : (strlen($area->down_count) > 2 ? 'text-2xl sm:text-4xl' : 'text-3xl sm:text-5xl') }}">
                                             {{ $area->down_count }}
                                         </span>
                                     </div>
                                     <div class="flex flex-col justify-center {{ $isWallboard ? 'p-2' : 'p-3 sm:p-4' }} rounded-xl bg-success-50 dark:bg-success-900/10 border border-success-100 dark:border-success-900/20 text-right">
                                         <span class="text-xs {{ $isWallboard ? '' : 'sm:text-sm' }} font-bold text-success-600/80 dark:text-success-400 uppercase tracking-wider mb-1">Online</span>
-                                        <span class="font-bold text-success-600 dark:text-success-500 {{ $isWallboard ? 'text-xl' : (strlen($area->up_count) > 2 ? 'text-2xl sm:text-4xl' : 'text-3xl sm:text-5xl') }}">
+                                        <span class="font-bold text-success-600 dark:text-success-500 {{ $isWallboard ? 'text-2xl' : (strlen($area->up_count) > 2 ? 'text-2xl sm:text-4xl' : 'text-3xl sm:text-5xl') }}">
                                             {{ $area->up_count }}
                                         </span>
                                     </div>
@@ -291,7 +291,9 @@
             @endif
         </div>
     </x-filament::section>
-    <div x-data="tvAutoScroll"></div>
+    @if($displayMode !== 'wallboard')
+        <div x-data="tvAutoScroll"></div>
+    @endif
     <script>
         document.addEventListener('alpine:init', () => {
             Alpine.data('tvAutoScroll', () => ({
@@ -313,11 +315,19 @@
                     this.startLoop();
                 },
 
+                destroy() {
+                    if (window.tvScrollState) {
+                        window.tvScrollState.running = false;
+                    }
+                },
+
                 startLoop() {
                     const scrollSpeed = 50; // pixels per second
                     const pauseDuration = 5000;
                     
                     const loop = (timestamp) => {
+                        if (!window.tvScrollState || !window.tvScrollState.running) return;
+
                         // Calculate delta time for smooth speed regardless of frame rate
                         if (!window.tvScrollState.lastTimestamp) window.tvScrollState.lastTimestamp = timestamp;
                         const deltaTime = timestamp - window.tvScrollState.lastTimestamp;

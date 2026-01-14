@@ -167,7 +167,9 @@
             @endif
         </div>
     </x-filament::section>
-    <div x-data="tvAutoScroll"></div>
+    @if($displayMode !== 'wallboard')
+        <div x-data="tvAutoScroll"></div>
+    @endif
     <script>
         document.addEventListener('alpine:init', () => {
             Alpine.data('tvAutoScroll', () => ({
@@ -188,11 +190,19 @@
                     this.startLoop();
                 },
 
+                destroy() {
+                    if (window.tvScrollState) {
+                        window.tvScrollState.running = false;
+                    }
+                },
+
                 startLoop() {
                     const scrollSpeed = 50; 
                     const pauseDuration = 5000;
                     
                     const loop = (timestamp) => {
+                        if (!window.tvScrollState || !window.tvScrollState.running) return;
+
                         if (!window.tvScrollState.lastTimestamp) window.tvScrollState.lastTimestamp = timestamp;
                         const deltaTime = timestamp - window.tvScrollState.lastTimestamp;
                         window.tvScrollState.lastTimestamp = timestamp;
