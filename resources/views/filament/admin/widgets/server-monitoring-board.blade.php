@@ -127,7 +127,7 @@
                     @foreach($servers as $server)
                         @php $isWallboard = $displayMode === 'wallboard'; @endphp
                         <a href="{{ route('filament.admin.resources.servers.edit', $server->id) }}" 
-                            class="flex flex-col {{ $isWallboard ? 'p-2' : 'p-5' }} bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 ring-1 ring-gray-950/5 dark:ring-white/10 rounded-xl shadow-md hover:shadow-lg hover:border-primary-200 dark:hover:border-primary-900 transition-all duration-300 group overflow-hidden">
+                            class="flex flex-col {{ $isWallboard ? 'p-2' : 'p-5' }} bg-white dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-600 ring-1 ring-gray-950/5 dark:ring-white/10 rounded-xl shadow-md hover:shadow-lg hover:border-primary-200 dark:hover:border-primary-900 transition-all duration-300 group overflow-hidden">
                             
                             {{-- Server Name --}}
                             <h3 class="{{ $isWallboard ? 'text-base' : 'text-lg sm:text-xl' }} font-bold text-gray-900 dark:text-white truncate uppercase {{ $isWallboard ? 'mb-0.5' : 'mb-2' }}" title="{{ $server->name }}">
@@ -157,11 +157,27 @@
                                 </div>
                             </div>
                             
-                            {{-- Last Seen --}}
+                            {{-- Last Seen (Context Aware) --}}
                             <div class="mt-auto pt-2 border-t border-gray-100 dark:border-gray-800">
-                                <p class="{{ $isWallboard ? 'text-[10px]' : 'text-xs' }} text-gray-500 dark:text-gray-400">
-                                    <span class="font-semibold">Last seen:</span> {{ $server->last_seen ? $server->last_seen->diffForHumans() : 'Never' }}
-                                </p>
+                                <div class="{{ $isWallboard ? 'text-[10px]' : 'text-xs' }} text-gray-500 dark:text-gray-400 flex items-center justify-between">
+                                    @if(! $server->last_seen)
+                                        <span class="text-gray-400 dark:text-gray-500 italic">Connection Pending...</span>
+                                    @elseif($server->status === 'down')
+                                        <span class="font-bold text-danger-600 dark:text-danger-500 flex items-center gap-1.5">
+                                            <x-filament::icon icon="heroicon-m-exclamation-circle" class="w-3 h-3" />
+                                            Offline: {{ $server->last_seen->diffForHumans() }}
+                                        </span>
+                                    @else
+                                        <div class="flex items-center gap-1.5">
+                                            <span class="relative flex h-2 w-2">
+                                              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-success-400 opacity-75"></span>
+                                              <span class="relative inline-flex rounded-full h-2 w-2 bg-success-500"></span>
+                                            </span>
+                                            <span class="font-semibold">Signal:</span>
+                                        </div>
+                                        <span>{{ $server->last_seen->diffForHumans() }}</span>
+                                    @endif
+                                </div>
                             </div>
                         </a>
                     @endforeach
