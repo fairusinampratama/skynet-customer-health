@@ -53,9 +53,13 @@ class SendDailyErrorReport extends Command
         // Whatspie requires a PUBLIC URL. So we must save to the 'public' disk.
         // Ensure you have run 'php artisan storage:link'
         $disk = \Illuminate\Support\Facades\Storage::disk('public');
-        $disk->put("reports/{$fileName}", $pdf->output());
+        if (!$disk->put("reports/{$fileName}", $pdf->output())) {
+            $this->error("Failed to write PDF to disk!");
+            return;
+        }
 
-        // Generate URL to the download route which enforces Content-Disposition
+        $fullPath = $disk->path("reports/{$fileName}");
+        $this->info("PDF saved to: {$fullPath}");
         // This ensures WhatsApp sees the correct filename
         $fileUrl = route('reports.download', ['filename' => $fileName]);
         
