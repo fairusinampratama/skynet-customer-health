@@ -69,13 +69,17 @@
                                 $minutes = $customer->health_checks_count;
                                 $hours = floor($minutes / 60);
                                 $remainingMinutes = $minutes % 60;
-                                $durationString = "";
+                                
+                                $parts = [];
                                 if ($hours > 0) {
-                                    $durationString .= $hours . "h ";
+                                    $parts[] = $hours . ' ' . ($hours == 1 ? 'hour' : 'hours');
                                 }
-                                if ($remainingMinutes > 0 || $hours == 0) {
-                                    $durationString .= $remainingMinutes . "m";
+                                
+                                if ($remainingMinutes > 0 || count($parts) == 0) {
+                                    $parts[] = $remainingMinutes . ' ' . ($remainingMinutes == 1 ? 'minute' : 'minutes');
                                 }
+                                
+                                $durationString = implode(' ', $parts);
                             @endphp
                             {{ $durationString }}
                         </td>
