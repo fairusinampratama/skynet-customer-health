@@ -36,7 +36,7 @@
 </head>
 <body>
     <div class="header">
-        <h1>Skynet Customer Health - Daily Error Report</h1>
+        <h1 style="color: #d32f2f; margin-bottom: 5px;">{{ $reportTitle }}</h1>
         <div class="date">For Date: {{ $date }}</div>
     </div>
 
