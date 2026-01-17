@@ -12,9 +12,6 @@ nixPkgs = [
     "php84Extensions.mbstring",
     "php84Extensions.ctype",
     "php84Extensions.curl",
-    "php84Extensions.gd",
-    "php84Extensions.zip",
-    "php84Extensions.intl",
     "php84Extensions.dom",
     "php84Extensions.fileinfo",
     "php84Extensions.filter",
@@ -36,4 +33,4 @@ cmds = [
 ]
 
 [start]
-cmd = "chmod -R 777 storage bootstrap/cache && php artisan optimize && php artisan migrate --force && npx concurrently -c \"#93c5fd,#c4b5fd\" \"php artisan serve --host=0.0.0.0 --port=8000\" \"php artisan schedule:work\""
+cmd = "chmod -R 777 storage bootstrap/cache && php artisan storage:link && php artisan optimize && php artisan migrate --force && npx concurrently -c \"#93c5fd,#c4b5fd\" \"php artisan serve --host=0.0.0.0 --port=8000\" \"php artisan schedule:work\""
