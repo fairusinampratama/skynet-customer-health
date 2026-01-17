@@ -132,7 +132,8 @@ class HealthCheckCommand extends Command
                         $status = 'unstable';
                     }
     
-                    if ($shouldLogHistory) {
+                    // Log history if it's the top of the hour OR if the status is not 'up'
+                    if ($shouldLogHistory || $status !== 'up') {
                         $server->healthChecks()->create([
                             'status' => $status,
                             'latency_ms' => $latency,
@@ -189,7 +190,8 @@ class HealthCheckCommand extends Command
                         $packetLoss = 100;
                     }
  
-                    if ($shouldLogHistory) {
+                    // Log history if it's the top of the hour OR if the status is not 'up' (to track downtime minutes)
+                    if ($shouldLogHistory || $status !== 'up') {
                         $customer->healthChecks()->create([
                             'status' => $status,
                             'latency_ms' => $latency,
@@ -266,7 +268,8 @@ class HealthCheckCommand extends Command
                         $status = 'unstable';
                     }
     
-                    if ($shouldLogHistory) {
+                    // Log history if it's the top of the hour OR if the status is not 'up'
+                    if ($shouldLogHistory || $status !== 'up') {
                         $customer->healthChecks()->create([
                             'status' => $status,
                             'latency_ms' => $latency,
