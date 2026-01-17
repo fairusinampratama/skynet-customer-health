@@ -62,6 +62,15 @@ class WhatsAppService
                 ]);
 
             if ($response->successful()) {
+                $responseData = $response->json();
+                echo "\n--- Whatspie Response ---\n";
+                print_r($responseData);
+                echo "\n-------------------------\n";
+                
+                Log::info('WhatsApp Service: Document sent successfully.', [
+                    'recipient' => $groupId, 
+                    'response' => $responseData
+                ]);
                 return true;
             }
 
