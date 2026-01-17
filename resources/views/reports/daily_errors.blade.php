@@ -50,6 +50,7 @@
         <table>
             <thead>
                 <tr>
+                    <th>No.</th>
                     <th>Customer Name</th>
                     <th>Area</th>
                     <th>IP Address</th>
@@ -60,6 +61,7 @@
             <tbody>
                 @foreach($affectedCustomers as $customer)
                     <tr>
+                        <td>{{ $loop->iteration }}</td>
                         <td>{{ $customer->name }}</td>
                         <td>{{ $customer->area->name ?? 'N/A' }}</td>
                         <td>{{ $customer->ip_address }}</td>
