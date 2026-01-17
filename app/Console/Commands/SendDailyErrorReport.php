@@ -49,7 +49,7 @@ class SendDailyErrorReport extends Command
             'affectedCustomers' => $customers,
         ]);
 
-        $fileName = "Daily_Error_Report_{$dayName}_{$formattedDate}.pdf";
+        $fileName = "Daily_Error_Report_{$dayName}_{$formattedDate}_" . now()->format('H-i-s') . ".pdf";
         // Whatspie requires a PUBLIC URL. So we must save to the 'public' disk.
         // Ensure you have run 'php artisan storage:link'
         $disk = \Illuminate\Support\Facades\Storage::disk('public');
