@@ -36,20 +36,45 @@ class SendDailyErrorReport extends Command
         $formattedDate = $date->format('Y-m-d');
         $humanReadableDate = $date->format('l, d F Y');
         
-        $this->info("Generating report for {$humanReadableDate}...");
+        $hour = (int) now()->format('H');
+        
+        if ($hour < 10) {
+            $reportTitle = "Morning Error Report";
+            // Filter: Show all issues since midnight
+        } elseif ($hour < 15) {
+            $reportTitle = "Afternoon Error Report";
+        } else {
+            $reportTitle = "Evening Error Report";
+        }
+
+        $this->info("Generating {$reportTitle} for {$humanReadableDate}...");
 
         // 1. Fetch data using the reusable scope
-        $customers = Customer::withIssuesOn($date)->get();
+        // This gets everyone with issues today
+        $allCustomers = Customer::withIssuesOn($date)->get();
+        
+        // 2. Filter: Only keep customers with >= 5 minutes (checks) of downtime
+        $customers = $allCustomers->filter(function ($customer) {
+            return $customer->health_checks_count >= 5;
+        });
 
-        $this->info("Found {$customers->count()} customers with issues.");
+        $this->info("Found {$allCustomers->count()} total issues. After filtering (< 5 mins): {$customers->count()} customers.");
 
-        // 2. Generate PDF
+        if ($customers->isEmpty()) {
+            $this->info("No customers with significant downtime (> 5 mins). Skipping report.");
+            // Optional: uncomment return to skip sending empty reports
+            // return; 
+        }
+
+        // 3. Generate PDF
         $pdf = Pdf::loadView('reports.daily_errors', [
+            'reportTitle' => $reportTitle,
             'date' => $humanReadableDate,
             'affectedCustomers' => $customers,
         ]);
 
-        $fileName = "Daily_Error_Report_{$dayName}_{$formattedDate}_" . now()->format('H-i-s') . ".pdf";
+        $safeTitle = \Illuminate\Support\Str::snake($reportTitle);
+        $fileName = "{$safeTitle}_{$dayName}_{$formattedDate}_" . now()->format('H-i-s') . ".pdf";
         // Whatspie requires a PUBLIC URL. So we must save to the 'public' disk.
         // Ensure you have run 'php artisan storage:link'
         $disk = \Illuminate\Support\Facades\Storage::disk('public');
@@ -77,7 +102,7 @@ class SendDailyErrorReport extends Command
             $sent = $whatsAppService->sendDocumentToGroup(
                 $groupId,
                 $fileUrl,
-                "Daily Error Report for {$humanReadableDate}\n\nSender: Skynet - NOC",
+                "{$reportTitle} for {$humanReadableDate}\n\nSender: Skynet - NOC",
                 $fileName
             );
 
