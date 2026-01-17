@@ -31,7 +31,7 @@ class SendDailyErrorReport extends Command
      */
     public function handle(WhatsAppService $whatsAppService)
     {
-        $date = Carbon::yesterday();
+        $date = Carbon::today();
         $dayName = $date->format('l');
         $formattedDate = $date->format('Y-m-d');
         $humanReadableDate = $date->format('l, d F Y');
