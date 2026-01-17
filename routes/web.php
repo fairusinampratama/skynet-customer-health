@@ -18,12 +18,22 @@ Route::get('/tv/downtime', [TvController::class, 'downtime']);
 
 // Route to serve report files with specific filename headers
 Route::get('/reports/download/{filename}', function ($filename) {
-    \Illuminate\Support\Facades\Log::info("Download Reqq: $filename");
-    \Illuminate\Support\Facades\Log::info("Checking Path: reports/$filename on public disk");
+    $path = "reports/$filename";
+    $disk = Storage::disk('public');
+    $fullPath = $disk->path($path);
+
+    \Illuminate\Support\Facades\Log::info("Download Req: $filename");
+    \Illuminate\Support\Facades\Log::info("Full Path: $fullPath");
     
-    if (!Storage::disk('public')->exists("reports/$filename")) {
-        \Illuminate\Support\Facades\Log::error("File NOT FOUND: reports/$filename");
+    if (!$disk->exists($path)) {
+        \Illuminate\Support\Facades\Log::error("File NOT FOUND (Exists Check Failed): $path");
         abort(404);
     }
-    return Storage::disk('public')->download("reports/$filename");
+
+    try {
+        return $disk->download($path);
+    } catch (\Exception $e) {
+        \Illuminate\Support\Facades\Log::error("Download FAILED: " . $e->getMessage());
+        throw $e;
+    }
 })->name('reports.download');
