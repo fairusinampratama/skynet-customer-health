@@ -31,6 +31,12 @@ class SendDailyErrorReport extends Command
      */
     public function handle(WhatsAppService $whatsAppService)
     {
+        // Check if report sending is enabled
+        if (!\App\Models\Setting::getValue('daily_report_enabled', true)) {
+            $this->warn('Daily Error Report is disabled in settings. Skipping.');
+            return;
+        }
+
         $date = Carbon::today();
         $dayName = $date->format('l');
         $formattedDate = $date->format('Y-m-d');
