@@ -29,6 +29,7 @@ class DowntimeMonitoringBoard extends Widget
             ->with(['area', 'latestHealth'])
             ->where('status', 'down')
             ->where('is_isolated', false)
+            ->where('updated_at', '<=', now()->subMinutes(5))
             ->orderBy('updated_at', 'asc') // Oldest downtime first (most critical)
             ->get();
     }
