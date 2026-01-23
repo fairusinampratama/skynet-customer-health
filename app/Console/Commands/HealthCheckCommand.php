@@ -149,11 +149,66 @@ class HealthCheckCommand extends Command
                         'last_seen' => $status === 'up' ? now() : $server->last_seen,
                     ]);
                     
+                    $this->checkServerAlert($server);
+                    
                     $this->output->progressAdvance();
                 }
             });
         }
         $this->output->progressFinish();
+    }
+    
+    protected function checkServerAlert(\App\Models\Server $server)
+    {
+        // 1. Check if server is DOWN
+        if ($server->status !== 'down') {
+            return;
+        }
+        
+        // 2. Check duration > 5 mins
+        // Use last_seen (time it was last UP) to calculate how long it's been down.
+        // If updated_at is used, it resets every health check if any metric changes (packet loss, etc), breaking the timer.
+        
+        if (! $server->last_seen) {
+            // New server or never seen up. Skip or use created_at. 
+            // For now, let's strictly require it to have been seen at least once to know it "went" down.
+            return;
+        }
+
+        $downSince = $server->last_seen;
+        
+        if ($downSince->diffInMinutes(now()) >= 5) {
+             // 3. Check if already alerted recently
+             if (! $server->last_alerted_at || $server->last_alerted_at < $downSince) {
+                 $this->sendServerAlert($server, $downSince);
+                 
+                 // Update last_alerted_at
+                 $server->last_alerted_at = now();
+                 $server->save();
+             }
+        }
+    }
+
+    protected function sendServerAlert(\App\Models\Server $server, $downSince)
+    {
+        $whatsAppService = app(\App\Services\WhatsApp\WhatsAppService::class);
+        $groupId = config('services.whatsapp.audit_group_id', env('WHATSAPP_AUDIT_GROUP_ID'));
+
+        if (! $groupId) {
+            $this->warn("WhatsApp Audit Group ID not configured. Cannot send server alert for {$server->name}.");
+            return;
+        }
+
+        $url = route('filament.admin.resources.servers.edit', $server);
+        
+        $message = "🚨 *CRITICAL: SERVER DOWN*\n\n" .
+            "🖥️ *Server:* {$server->name}\n" .
+            "🌍 *IP:* {$server->ip_address}\n" .
+            "⏱️ *Duration:* {$downSince->diffForHumans()}\n\n" .
+            "🔗 [View Dashboard]({$url})";
+            
+        $whatsAppService->sendMessageToGroup($groupId, $message);
+        $this->info("Sent WhatsApp alert for server {$server->name}");
     }
 
     protected function checkCustomers($shouldLogHistory = false)
