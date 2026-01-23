@@ -205,7 +205,9 @@ class HealthCheckCommand extends Command
             "🖥️ *Server:* {$server->name}\n" .
             "🌍 *IP:* {$server->ip_address}\n" .
             "⏱️ *Duration:* {$downSince->diffForHumans()}\n\n" .
-            "🔗 [View Dashboard]({$url})";
+            "🔗 [View Dashboard]({$url})\n\n" .
+            "🤖 *Sender:* NOC Skynet\n" .
+            "⚠️ _Disclaimer: This is an automatic message._";
             
         $whatsAppService->sendMessageToGroup($groupId, $message);
         $this->info("Sent WhatsApp alert for server {$server->name}");
