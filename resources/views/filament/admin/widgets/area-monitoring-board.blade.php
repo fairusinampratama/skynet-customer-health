@@ -199,7 +199,7 @@
                             {{-- Top Row --}}
                             <div class="flex justify-between items-start {{ $isWallboard ? 'mb-1' : 'mb-4 sm:mb-6' }} gap-2">
                                 <div class="overflow-hidden">
-                                    <h3 class="{{ $isWallboard ? 'text-sm' : 'text-lg sm:text-2xl' }} font-bold text-gray-900 dark:text-white truncate uppercase" title="{{ $area->name }}">
+                                    <h3 class="{{ $isWallboard ? 'text-xs sm:text-sm leading-tight line-clamp-2 h-8 flex items-center' : 'text-lg sm:text-2xl truncate' }} font-bold text-gray-900 dark:text-white uppercase" title="{{ $area->name }}">
                                         {{ $area->name }}
                                     </h3>
                                     <p class="{{ $isWallboard ? 'text-[10px]' : 'text-sm sm:text-base' }} text-gray-500 dark:text-gray-400 mt-0.5">
