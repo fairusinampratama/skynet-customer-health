@@ -115,7 +115,9 @@ class SendDailyErrorReport extends Command
                 "📊 *{$reportTitle}*\n" .
                 "📅 {$humanReadableDate}\n" .
                 "📉 *Issues Found:* {$customers->count()} Customers\n\n" .
-                "📎 _See attached PDF for details._",
+                "📎 _See attached PDF for details._\n\n" .
+                "🤖 *Sender:* NOC Skynet\n" .
+                "⚠️ _Disclaimer: This is an automatic message._",
                 $fileName
             );
 
