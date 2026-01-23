@@ -26,6 +26,7 @@ class DatabaseSeeder extends Seeder
             XlsxImportSeeder::class,
             ServerImportSeeder::class,
             IsolationStateSeeder::class,
+            DummyAreaSeeder::class,
         ]);
     }
 }
