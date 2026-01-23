@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>Daily Error Report</title>
+    <title>{{ $reportTitle }}</title>
     <style>
         body {
             font-family: sans-serif;
@@ -37,7 +37,7 @@
 <body>
     <div class="header">
         <h1 style="color: #d32f2f; margin-bottom: 5px;">{{ $reportTitle }}</h1>
-        <div class="date">For Date: {{ $date }}</div>
+        <div class="date">Date: {{ $date }}</div>
     </div>
 
     <div class="summary">

@@ -21,11 +21,50 @@ class WhatsAppService
     /**
      * Send a text message to a generic recipient (generic implementation left for reference).
      */
-    public function sendMessage(string $to, string $message): bool
+    /**
+     * Send a text message to a Whatspie Group.
+     * 
+     * @param string $groupId
+     * @param string $message
+     * @return bool
+     */
+    public function sendMessageToGroup(string $groupId, string $message): bool
     {
-        // Implementation depends on if $to is a group or user. 
-        // For now, focusing on the Report requirement.
-        return false;
+        if (!$this->token || !$this->device) {
+            Log::warning('WhatsApp Service: Token or Device ID not configured.');
+            return false;
+        }
+
+        $endpoint = "{$this->baseUrl}/groups/{$groupId}/send";
+
+        try {
+            $response = Http::withToken($this->token)
+                ->post($endpoint, [
+                    'device' => $this->device,
+                    'type' => 'chat', 
+                    'params' => [
+                        'text' => $message,
+                    ]
+                ]);
+
+            if ($response->successful()) {
+                Log::info('WhatsApp Service: Message sent successfully.', [
+                    'recipient' => $groupId
+                ]);
+                return true;
+            }
+
+            Log::error('WhatsApp Service: Failed to send message to group.', [
+                'endpoint' => $endpoint,
+                'status' => $response->status(),
+                'body' => $response->body(),
+            ]);
+
+            return false;
+        } catch (\Exception $e) {
+            Log::error('WhatsApp Service: Exception sending message.', ['error' => $e->getMessage()]);
+            return false;
+        }
     }
 
     /**

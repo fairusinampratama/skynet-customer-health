@@ -186,8 +186,8 @@
                             this.height = Math.max(available, 200) + 'px';
                         }
                     }"
-                    class="grid gap-4 sm:gap-6 {{ $displayMode === 'wallboard' ? $wallboardClass : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 2xl:grid-cols-6' }}" 
-                    :style="'{{ $displayMode === 'wallboard' }}' ? (style + ' height: ' + height) : ''">
+                    class="grid gap-4 sm:gap-6 {{ $displayMode === 'wallboard' ? $wallboardClass : '' }}" 
+                    :style="'{{ $displayMode === 'wallboard' }}' ? (style + ' height: ' + height) : 'grid-template-columns: repeat(auto-fill, minmax(320px, 1fr))'">
                     @foreach($this->areas as $area)
                         @php 
                             $status = $getHealthStatus($area->health_score);

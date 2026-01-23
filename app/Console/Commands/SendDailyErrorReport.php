@@ -45,13 +45,17 @@ class SendDailyErrorReport extends Command
         $hour = (int) now()->format('H');
         
         if ($hour < 10) {
-            $reportTitle = "Morning Error Report";
-            // Filter: Show all issues since midnight
+            $reportTitle = "Morning Error Report ({$hour}:00)";
         } elseif ($hour < 15) {
-            $reportTitle = "Afternoon Error Report";
+            $reportTitle = "Afternoon Error Report ({$hour}:00)";
+        } elseif ($hour < 19) {
+            $reportTitle = "Evening Error Report ({$hour}:00)";
         } else {
-            $reportTitle = "Evening Error Report";
+            $reportTitle = "Night Error Report ({$hour}:00)";
         }
+        
+        // Or simply:
+        $reportTitle = "Error Report - " . now()->format('H:i');
 
         $this->info("Generating {$reportTitle} for {$humanReadableDate}...");
 
@@ -108,7 +112,10 @@ class SendDailyErrorReport extends Command
             $sent = $whatsAppService->sendDocumentToGroup(
                 $groupId,
                 $fileUrl,
-                "{$reportTitle} for {$humanReadableDate}\n\nSender: Skynet - NOC",
+                "📊 *{$reportTitle}*\n" .
+                "📅 {$humanReadableDate}\n" .
+                "📉 *Issues Found:* {$customers->count()} Customers\n\n" .
+                "📎 _See attached PDF for details._",
                 $fileName
             );
 
