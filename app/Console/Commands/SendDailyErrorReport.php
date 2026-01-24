@@ -59,16 +59,11 @@ class SendDailyErrorReport extends Command
 
         $this->info("Generating {$reportTitle} for {$humanReadableDate}...");
 
-        // 1. Fetch data using the reusable scope
-        // This gets everyone with issues today
-        $allCustomers = Customer::withIssuesOn($date)->get();
-        
-        // 2. Filter: Only keep customers with >= 5 minutes (checks) of downtime
-        $customers = $allCustomers->filter(function ($customer) {
-            return $customer->health_checks_count >= 5;
-        });
+        // 1. Fetch data using the reusable scope for CRITICAL issues (Matches Dashboard)
+        // This gets everyone who is currently down for > 5 minutes
+        $customers = Customer::criticallyDown()->with('area')->get();
 
-        $this->info("Found {$allCustomers->count()} total issues. After filtering (< 5 mins): {$customers->count()} customers.");
+        $this->info("Found {$customers->count()} critical issues (Current Down > 5 mins).");
 
         if ($customers->isEmpty()) {
             $this->info("No customers with significant downtime (> 5 mins). Skipping report.");

@@ -37,6 +37,7 @@ class AreaMonitoringBoard extends Widget
                             });
                       });
             }, 'customers as down_count' => function ($query) {
+                // Use the same logic as scopeCriticallyDown manually here because it's a subquery relation
                 $query->where('status', 'down')
                       ->where('is_isolated', false)
                       ->where('updated_at', '<=', now()->subMinutes(5));

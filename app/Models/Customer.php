@@ -60,4 +60,18 @@ class Customer extends Model
                   ->where('status', 'down');
             }]);
     }
+
+    /**
+     * Scope a query to only include customers who are critically down right now.
+     * Logic matches the Admin Dashboard "Down" count.
+     * 
+     * @param \Illuminate\Database\Eloquent\Builder $query
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeCriticallyDown($query)
+    {
+        return $query->where('status', 'down')
+            ->where('is_isolated', false)
+            ->where('updated_at', '<=', now()->subMinutes(5));
+    }
 }
