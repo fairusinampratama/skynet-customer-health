@@ -315,13 +315,12 @@
             @endif
         </div>
     </x-filament::section>
-    @if($displayMode !== 'wallboard')
-        <div x-data="tvAutoScroll"></div>
-    @endif
+
     <script>
         document.addEventListener('alpine:init', () => {
             Alpine.data('tvAutoScroll', () => ({
                 init() {
+                    // STRICT CHECK: Only run on TV routes
                     if (!window.location.pathname.includes('/tv/')) return;
                     
                     // Initialize global state if missing
