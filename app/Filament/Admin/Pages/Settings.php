@@ -41,6 +41,20 @@ class Settings extends Page implements HasForms
                             ->label('Enable Daily Error Reports')
                             ->helperText('If disabled, the automated daily reports (every 2 hours from 08:00 to 00:00) will not be sent to WhatsApp.')
                             ->default(true),
+
+                        Actions::make([
+                             Action::make('sendNow')
+                                ->label('Send Daily Report Now')
+                                ->color('success')
+                                ->icon('heroicon-o-paper-airplane')
+                                ->requiresConfirmation()
+                                ->modalHeading('Send Daily Error Report')
+                                ->modalDescription('Generate and send a real-time snapshot of currently down customers? Only customers with > 5 minutes of active downtime will be included.')
+                                ->modalSubmitActionLabel('Yes, Send it')
+                                ->action(function () {
+                                    $this->sendReport(app(\App\Services\WhatsApp\WhatsAppService::class));
+                                }),
+                        ]),
                         
                     ]),
                 Actions::make([
