@@ -11,7 +11,7 @@ class DowntimeMonitoringBoard extends Widget
     protected int | string | array $columnSpan = 'full';
     protected ?string $pollingInterval = '30s';
     
-
+    protected static bool $isLazy = false; // Temporarily disable lazy loading for debugging
 
     public $displayMode = 'table'; // table, card
 
