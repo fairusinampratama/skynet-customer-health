@@ -52,23 +52,14 @@ class Settings extends Page implements HasForms
                                 ->modalDescription('Generate and send a real-time snapshot of currently down customers? Only customers with > 5 minutes of active downtime will be included.')
                                 ->modalSubmitActionLabel('Yes, Send it')
                                 ->action(function () {
-                                    set_time_limit(120);
-
-                                    try {
-                                        \Illuminate\Support\Facades\Artisan::call('app:send-daily-error-report');
-                                        
-                                        Notification::make()
-                                            ->title('Report Sent')
-                                            ->body('The daily error report has been generated and sent to WhatsApp.')
-                                            ->success()
-                                            ->send();
-                                    } catch (\Throwable $e) {
-                                        Notification::make()
-                                            ->title('Failed to Send Report')
-                                            ->body('Error: ' . $e->getMessage())
-                                            ->danger()
-                                            ->send();
-                                    }
+                                    // Dispatch to queue to prevent timeout / Bad Gateway
+                                    \App\Jobs\SendDailyErrorReportJob::dispatch();
+                                    
+                                    Notification::make()
+                                        ->title('Report Generation Queued')
+                                        ->body('The report is being generated in the background and will be sent to WhatsApp shortly.')
+                                        ->success()
+                                        ->send();
                                 }),
                         ]),
                     ]),
