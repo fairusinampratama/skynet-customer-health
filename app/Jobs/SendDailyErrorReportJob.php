@@ -17,10 +17,12 @@ class SendDailyErrorReportJob implements ShouldQueue
     /**
      * Create a new job instance.
      */
-    public function __construct()
-    {
-        //
-    }
+    /**
+     * The number of times the job may be attempted.
+     *
+     * @var int
+     */
+    public $tries = 1;
 
     /**
      * Execute the job.
@@ -31,15 +33,24 @@ class SendDailyErrorReportJob implements ShouldQueue
         
         try {
             // We reuse the existing artisan command logic
-            // Ideally we would move logic to a Service, but calling Artisan is safe here
-            // and ensures identical behavior to the CLI command.
-            Artisan::call('app:send-daily-error-report');
+            Log::info('Dispatching Artisan Command: app:send-daily-error-report');
             
-            Log::info('Job Finished: SendDailyErrorReportJob');
+            $exitCode = Artisan::call('app:send-daily-error-report');
+            
+            Log::info('Job Finished: SendDailyErrorReportJob', ['exit_code' => $exitCode]);
+            
+            if ($exitCode !== 0) {
+                 Log::error('Job FAILED: Artisan command returned non-zero exit code.', ['exit_code' => $exitCode]);
+                 throw new \Exception("Artisan command failed with exit code $exitCode");
+            }
         } catch (\Throwable $e) {
-            Log::error('Job Failed: SendDailyErrorReportJob', ['error' => $e->getMessage()]);
-            // Optionally we could re-throw to let the queue worker retry
-            // throw $e; 
+            Log::error('Job CRASHED: SendDailyErrorReportJob', [
+                'error' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'trace' => $e->getTraceAsString()
+            ]);
+            throw $e; 
         }
     }
 }
