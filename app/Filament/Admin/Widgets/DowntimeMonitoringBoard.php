@@ -32,6 +32,7 @@ class DowntimeMonitoringBoard extends Widget
             ->where('status', 'down')
             ->where('is_isolated', false)
             ->orderBy('updated_at', 'asc') // Oldest downtime first (most critical)
+            ->limit(50)
             ->get();
     }
 }
