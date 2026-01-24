@@ -50,10 +50,7 @@ class Customer extends Model
      */
     public function scopeWithIssuesOn($query, $date)
     {
-        return $query->whereHas('healthChecks', function ($q) use ($date) {
-                $q->whereDate('checked_at', $date)
-                  ->where('status', 'down');
-            })
+        return $query->whereIn('status', ['offline', 'down', 'unstable'])
             ->where('is_isolated', false)
             ->with(['area', 'healthChecks' => function ($q) {
                 $q->latest('checked_at')->limit(1);
