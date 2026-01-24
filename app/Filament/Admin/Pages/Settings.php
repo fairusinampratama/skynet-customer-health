@@ -88,7 +88,18 @@ class Settings extends Page implements HasForms
             $reportTitle = "Error Report - " . now()->format('H:i');
 
             // Fetch data
-            $customers = \App\Models\Customer::criticallyDown()->with('area')->get();
+            $customers = \App\Models\Customer::criticallyDown()
+                ->with('area')
+                // CRITICAL FIX: Limit relationship to 1 to prevent loading 100k+ records per customer
+                ->with(['healthChecks' => function ($q) {
+                    $q->latest('checked_at')->limit(1);
+                }])
+                // Re-add the count for the PDF "Total Downtime" column
+                ->withCount(['healthChecks' => function ($q) {
+                    $q->whereDate('checked_at', \Carbon\Carbon::today())
+                      ->where('status', 'down');
+                }])
+                ->get();
 
             if ($customers->isEmpty()) {
                 Notification::make()
