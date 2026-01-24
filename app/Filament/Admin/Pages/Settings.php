@@ -49,7 +49,7 @@ class Settings extends Page implements HasForms
                                 ->icon('heroicon-o-paper-airplane')
                                 ->requiresConfirmation()
                                 ->modalHeading('Send Daily Error Report')
-                                ->modalDescription('Are you sure you want to generate and send the daily error report immediately? The title (Morning/Afternoon/Evening) will be based on the current time.')
+                                ->modalDescription('Generate and send a real-time snapshot of currently down customers? Only customers with > 5 minutes of active downtime will be included.')
                                 ->modalSubmitActionLabel('Yes, Send it')
                                 ->action(function () {
                                     \Illuminate\Support\Facades\Artisan::call('app:send-daily-error-report');
