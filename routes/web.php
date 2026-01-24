@@ -14,7 +14,7 @@ Route::get('/login', function () {
 
 Route::get('/tv/areas', [TvController::class, 'areas']);
 Route::get('/tv/servers', [TvController::class, 'servers']);
-Route::get('/tv/downtime', [TvController::class, 'downtime']);
+
 
 // Route to serve report files with specific filename headers
 Route::get('/reports/download/{filename}', function ($filename) {
