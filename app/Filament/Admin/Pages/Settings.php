@@ -39,7 +39,7 @@ class Settings extends Page implements HasForms
                     ->schema([
                         Toggle::make('daily_report_enabled')
                             ->label('Enable Daily Error Reports')
-                            ->helperText('If disabled, the automated daily reports (8:00, 12:30, 19:00) will not be sent to WhatsApp.')
+                            ->helperText('If disabled, the automated daily reports (every 2 hours from 08:00 to 00:00) will not be sent to WhatsApp.')
                             ->default(true),
                         
                         Actions::make([
@@ -52,13 +52,23 @@ class Settings extends Page implements HasForms
                                 ->modalDescription('Generate and send a real-time snapshot of currently down customers? Only customers with > 5 minutes of active downtime will be included.')
                                 ->modalSubmitActionLabel('Yes, Send it')
                                 ->action(function () {
-                                    \Illuminate\Support\Facades\Artisan::call('app:send-daily-error-report');
-                                    
-                                    Notification::make()
-                                        ->title('Report Sent')
-                                        ->body('The daily error report has been generated and sent to WhatsApp.')
-                                        ->success()
-                                        ->send();
+                                    set_time_limit(120);
+
+                                    try {
+                                        \Illuminate\Support\Facades\Artisan::call('app:send-daily-error-report');
+                                        
+                                        Notification::make()
+                                            ->title('Report Sent')
+                                            ->body('The daily error report has been generated and sent to WhatsApp.')
+                                            ->success()
+                                            ->send();
+                                    } catch (\Throwable $e) {
+                                        Notification::make()
+                                            ->title('Failed to Send Report')
+                                            ->body('Error: ' . $e->getMessage())
+                                            ->danger()
+                                            ->send();
+                                    }
                                 }),
                         ]),
                     ]),
