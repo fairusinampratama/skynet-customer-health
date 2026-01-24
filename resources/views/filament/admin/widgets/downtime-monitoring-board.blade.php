@@ -68,10 +68,10 @@
                                     <td class="px-6 py-5 text-center">
                                         <div class="flex flex-col items-center">
                                             <span class="inline-flex items-center px-4 py-1.5 rounded-md text-base font-bold bg-danger-50 text-danger-700 dark:bg-danger-400/10 dark:text-danger-400 ring-1 ring-inset ring-danger-600/20">
-                                                {{ $record->updated_at->diffForHumans(null, true, true) }}
+                                                {{ optional($record->updated_at)->diffForHumans(null, true, true) ?? 'N/A' }}
                                             </span>
                                             <span class="text-xs text-gray-400 mt-1 font-mono">
-                                                {{ $record->updated_at->format('M d, H:i') }}
+                                                {{ optional($record->updated_at)->format('M d, H:i') ?? '-' }}
                                             </span>
                                         </div>
                                     </td>
@@ -126,11 +126,11 @@
                                 <div class="flex flex-col">
                                     <span class="text-xs text-gray-400">Down since</span>
                                     <span class="text-xs font-mono font-medium text-gray-600 dark:text-gray-300">
-                                        {{ $record->updated_at->format('H:i') }}
+                                        {{ optional($record->updated_at)->format('H:i') ?? '--:--' }}
                                     </span>
                                 </div>
                                 <span class="inline-flex items-center rounded-md px-2.5 py-1 text-sm font-bold bg-danger-50 text-danger-700 dark:bg-danger-400/10 dark:text-danger-400 ring-1 ring-inset ring-danger-600/20">
-                                    {{ $record->updated_at->diffForHumans(null, true, true) }}
+                                    {{ optional($record->updated_at)->diffForHumans(null, true, true) ?? 'N/A' }}
                                 </span>
                             </div>
                         </a>
