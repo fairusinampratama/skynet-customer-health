@@ -75,7 +75,7 @@ class WhatsAppService
      * @param string $caption
      * @return bool
      */
-    public function sendDocumentToGroup(string $groupId, string $fileUrl, string $caption = '', string $filename = null): bool
+    public function sendDocumentToGroup(string $groupId, string $fileUrl, string $caption = '', ?string $filename = null): bool
     {
         if (!$this->token || !$this->device) {
             Log::warning('WhatsApp Service: Token or Device ID not configured.');
@@ -117,6 +117,50 @@ class WhatsAppService
             return false;
         } catch (\Exception $e) {
             Log::error('WhatsApp Service: Exception sending document.', ['error' => $e->getMessage()]);
+            return false;
+        }
+    }
+    public function sendDocument(string $phone, string $fileUrl, string $caption = ''): bool
+    {
+        if (!$this->token || !$this->device) {
+            Log::warning('WhatsApp Service: Token or Device ID not configured.');
+            return false;
+        }
+
+        // Whatspie Endpoint: POST /messages/send
+        $endpoint = "{$this->baseUrl}/messages/send";
+
+        try {
+            $response = Http::withToken($this->token)
+                ->post($endpoint, [
+                    'device' => $this->device,
+                    'receiver' => $phone,
+                    'type' => 'file',
+                    'params' => [
+                        'document' => [
+                            'url' => $fileUrl,
+                        ],
+                        'caption' => $caption,
+                    ]
+                ]);
+
+            if ($response->successful()) {
+                Log::info('WhatsApp Service: Document sent to individual successfully.', [
+                    'recipient' => $phone,
+                    'response' => $response->json()
+                ]);
+                return true;
+            }
+
+            Log::error('WhatsApp Service: Failed to send document to individual.', [
+                'endpoint' => $endpoint,
+                'status' => $response->status(),
+                'body' => $response->body(),
+            ]);
+
+            return false;
+        } catch (\Exception $e) {
+            Log::error('WhatsApp Service: Exception sending document to individual.', ['error' => $e->getMessage()]);
             return false;
         }
     }
