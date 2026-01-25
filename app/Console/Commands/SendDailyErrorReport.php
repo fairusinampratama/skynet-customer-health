@@ -61,7 +61,18 @@ class SendDailyErrorReport extends Command
 
         // 1. Fetch data using the reusable scope for CRITICAL issues (Matches Dashboard)
         // This gets everyone who is currently down for > 5 minutes
-        $customers = Customer::criticallyDown()->with('area')->get();
+        $customers = Customer::criticallyDown()
+            ->with('area')
+             // RESTORE SAFETY: Limit to 1 record to prevent loading entire history
+            ->with(['healthChecks' => function ($q) {
+                $q->latest('checked_at')->limit(1);
+            }])
+            // Count for PDF logic
+            ->withCount(['healthChecks' => function ($q) {
+                $q->whereDate('checked_at', Carbon::today())
+                  ->where('status', 'down');
+            }])
+            ->get();
 
         $this->info("Found {$customers->count()} critical issues (Current Down > 5 mins).");
 
