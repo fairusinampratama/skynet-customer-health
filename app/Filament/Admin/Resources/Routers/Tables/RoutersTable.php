@@ -88,6 +88,31 @@ class RoutersTable
                             ->success()
                             ->send();
                     }),
+                \Filament\Actions\Action::make('test_connection')
+                    ->label('Test Connection')
+                    ->icon('heroicon-o-signal')
+                    ->color('warning')
+                    ->action(function ($record) {
+                        try {
+                            $start = microtime(true);
+                            $service = app(\App\Services\MikrotikService::class);
+                            $service->fetchHealth($record);
+                            $duration = round((microtime(true) - $start) * 1000, 2);
+                            
+                            \Filament\Notifications\Notification::make()
+                                ->title('Connection Successful')
+                                ->body("Connected to {$record->name} in {$duration}ms")
+                                ->success()
+                                ->send();
+                        } catch (\Exception $e) {
+                             \Filament\Notifications\Notification::make()
+                                ->title('Connection Failed')
+                                ->body($e->getMessage())
+                                ->danger()
+                                ->persistent()
+                                ->send();
+                        }
+                    }),
                 \Filament\Actions\EditAction::make(),
             ])
             ->bulkActions([
