@@ -16,4 +16,8 @@ class EditRouter extends EditRecord
             DeleteAction::make(),
         ];
     }
+    protected function afterSave(): void
+    {
+        \App\Jobs\CheckRouterHealth::dispatch($this->record);
+    }
 }

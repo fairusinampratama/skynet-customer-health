@@ -8,4 +8,8 @@ use Filament\Resources\Pages\CreateRecord;
 class CreateRouter extends CreateRecord
 {
     protected static string $resource = RouterResource::class;
+    protected function afterCreate(): void
+    {
+        \App\Jobs\CheckRouterHealth::dispatch($this->record);
+    }
 }
