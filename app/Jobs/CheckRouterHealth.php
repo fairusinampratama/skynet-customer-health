@@ -21,7 +21,7 @@ class CheckRouterHealth implements ShouldQueue
         public Router $router
     ) {}
 
-    public function handle(WhatsAppService $whatsAppService): void
+    public function handle(WhatsAppService $whatsAppService, \App\Services\MikrotikService $mikrotikService): void
     {
         if (env('SIMULATE_HEALTH_CHECKS', false)) {
             $this->simulateHealthCheck($whatsAppService);
@@ -29,79 +29,16 @@ class CheckRouterHealth implements ShouldQueue
         }
 
         try {
-            $config = (new Config())
-                ->set('host', $this->router->ip_address)
-                ->set('port', (int) $this->router->port)
-                ->set('user', $this->router->username)
-                ->set('pass', $this->router->password);
+            $metrics = $mikrotikService->fetchHealth($this->router);
 
-            $client = new Client($config);
-
-            // Get System Resource
-            $query = new Query('/system/resource/print');
-            $response = $client->query($query)->read();
+            $this->router->update($metrics);
             
-            if (empty($response)) {
-                 throw new Exception("Empty response from Mikrotik");
-            }
-
-            $data = $response[0];
-            
-            // Get Health Data (Temperature, Voltage, etc.)
-            // Note: Different routerboards have different health fields.
-            $healthQuery = new Query('/system/health/print');
-            $healthResponse = $client->query($healthQuery)->read();
-            $temperature = 0;
-            
-            if (!empty($healthResponse)) {
-                // Flatten the response if it's a list of key-values (common in some ROS versions)
-                // usually health print returns: [[name=>temperature, value=>45], [name=>voltage, value=>24]] 
-                // OR simple key-value: [[temperature=>45, voltage=>24]]
-                
-                $healthData = $healthResponse[0];
-                
-                if (isset($healthData['temperature'])) {
-                    $temperature = (int) $healthData['temperature'];
-                } elseif (isset($healthData['cpu-temperature'])) {
-                     $temperature = (int) $healthData['cpu-temperature'];
-                } else {
-                    // Try to scan array for 'name' => 'temperature' (older/specific models)
-                    foreach ($healthResponse as $item) {
-                        if (isset($item['name']) && $item['name'] === 'temperature' && isset($item['value'])) {
-                            $temperature = (int) $item['value'];
-                            break;
-                        }
-                    }
-                }
-            }
-
-            // Get Disk Usage (system/store/disk/print or file system check - simplifying to just resource for now)
-            // Resource usually gives disk details or we can check /system/disk/print if needed. 
-            // For now, let's stick to CPU/Mem from resource.
-            // Check 'free-hdd-space' and 'total-hdd-space' if available in resource.
-            
-            $cpu = isset($data['cpu-load']) ? (int) $data['cpu-load'] : 0;
-            $freeMem = isset($data['free-memory']) ? (int) $data['free-memory'] : 0;
-            $totalMem = isset($data['total-memory']) ? (int) $data['total-memory'] : 0;
-            $freeHdd = isset($data['free-hdd-space']) ? (float) $data['free-hdd-space'] : 0;
-            $totalHdd = isset($data['total-hdd-space']) ? (float) $data['total-hdd-space'] : 0;
-            
-            $diskUsage = 0;
-            if ($totalHdd > 0) {
-                 $diskUsage = round((($totalHdd - $freeHdd) / $totalHdd) * 100, 2);
-            }
-
-            $this->router->update([
-                'status' => 'up',
-                'cpu_load' => $cpu,
-                'temperature' => $temperature,
-                'free_memory' => $freeMem,
-                'total_memory' => $totalMem,
-                'disk_usage' => $diskUsage,
-                'last_seen' => now(),
-            ]);
-            
-            $this->checkThresholds($cpu, $freeMem, $temperature, $whatsAppService);
+            $this->checkThresholds(
+                $metrics['cpu_load'], 
+                $metrics['free_memory'], 
+                $metrics['temperature'], 
+                $whatsAppService
+            );
 
         } catch (Exception $e) {
             Log::error("Mikrotik connection failed for {$this->router->name}: " . $e->getMessage());
