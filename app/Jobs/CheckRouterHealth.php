@@ -174,21 +174,61 @@ class CheckRouterHealth implements ShouldQueue
                    "🤖 *Sender:* NOC Skynet\n" .
                    "⚠️ _Disclaimer: This is an automatic message._";
                    
-            $this->triggerAlert($msg, $whatsAppService);
+            $this->triggerAlert($msg, $whatsAppService, [
+                'cpu' => $cpu,
+                'temperature' => $temperature,
+                'free_memory' => $freeMem
+            ]);
         }
     }
     
-    protected function triggerAlert($message, $whatsAppService)
+    protected function triggerAlert($message, $whatsAppService, $currentMetrics = [])
     {
-        // Simple rate limiting: Don't spam. Only alert if not alerted in last 30 mins
-        if ($this->router->last_alerted_at && $this->router->last_alerted_at->diffInMinutes(now()) < 30) {
-            return;
+        $shouldSend = false;
+        $isEscalation = false;
+
+        // 1. Check Time-based Rate Limiting (30 mins)
+        if (! $this->router->last_alerted_at || $this->router->last_alerted_at->diffInMinutes(now()) >= 30) {
+            $shouldSend = true;
         }
 
-        $groupId = config('services.whatsapp.audit_group_id', env('WHATSAPP_AUDIT_GROUP_ID'));
-        if ($groupId) {
-             $whatsAppService->sendMessageToGroup($groupId, $message);
-             $this->router->update(['last_alerted_at' => now()]);
+        // 2. Check Smart Escalation (If currently blocked by time, check if condition worsened)
+        if (! $shouldSend && ! empty($currentMetrics) && ! empty($this->router->last_alert_values)) {
+            $last = $this->router->last_alert_values;
+            
+            // Check Temperature Increase (+5)
+            if (isset($currentMetrics['temperature']) && isset($last['temperature'])) {
+                if ($currentMetrics['temperature'] >= $last['temperature'] + 5) {
+                    $shouldSend = true;
+                    $isEscalation = true;
+                    $message = "📈 *ESCALATION ALERT*\n\n" . $message;
+                }
+            }
+            
+            // Check CPU Increase (+5)
+            if (isset($currentMetrics['cpu']) && isset($last['cpu'])) {
+                if ($currentMetrics['cpu'] >= $last['cpu'] + 5) {
+                    $shouldSend = true;
+                    $isEscalation = true;
+                    $message = "📈 *ESCALATION ALERT*\n\n" . $message;
+                }
+            }
+        }
+        
+        // Critical override (if message explicitly says CRITICAL, always send? 
+        // Logic currently only handles escalation. Let's assume down status handles its own forcing logic via separate call if needed, 
+        // but here we just respect the flag)
+        
+        if ($shouldSend) {
+            $groupId = config('services.whatsapp.audit_group_id', env('WHATSAPP_AUDIT_GROUP_ID'));
+            if ($groupId) {
+                 $whatsAppService->sendMessageToGroup($groupId, $message);
+                 
+                 $this->router->update([
+                     'last_alerted_at' => now(),
+                     'last_alert_values' => $currentMetrics // Snapshot values
+                 ]);
+            }
         }
     }
 }

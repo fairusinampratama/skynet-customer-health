@@ -21,12 +21,14 @@ class Router extends Model
         'disk_usage',
         'last_seen',
         'last_alerted_at',
+        'last_alert_values',
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
         'last_seen' => 'datetime',
         'last_alerted_at' => 'datetime',
+        'last_alert_values' => 'array',
         'password' => 'encrypted',
     ];
 }
