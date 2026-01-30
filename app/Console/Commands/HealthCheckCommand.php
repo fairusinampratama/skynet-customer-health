@@ -38,10 +38,34 @@ class HealthCheckCommand extends Command
              $this->info('Real-time check: Updating status only (History skipped).');
         }
 
+        $this->checkRouters();
         $this->checkCustomers($shouldLogHistory);
         $this->checkServers($shouldLogHistory);
         
         $this->info('Health check completed for all systems.');
+    }
+
+    protected function checkRouters()
+    {
+        $this->info('Starting Router Health Check...');
+        
+        // Dispatch jobs for all active routers
+        // We do this to prevent blocking the main thread if Mikrotik API is slow/down
+        $routers = \App\Models\Router::where('is_active', true)->get();
+        
+        if ($routers->isEmpty()) {
+             $this->info('No active routers found.');
+             return;
+        }
+
+        $this->output->progressStart($routers->count());
+        
+        foreach ($routers as $router) {
+            \App\Jobs\CheckRouterHealth::dispatch($router);
+            $this->output->progressAdvance();
+        }
+        
+        $this->output->progressFinish();
     }
 
     protected function checkServers($shouldLogHistory = false)
@@ -199,13 +223,10 @@ class HealthCheckCommand extends Command
             return;
         }
 
-        $url = route('filament.admin.resources.servers.edit', $server);
-        
         $message = "🚨 *CRITICAL: SERVER DOWN*\n\n" .
             "🖥️ *Server:* {$server->name}\n" .
             "🌍 *IP:* {$server->ip_address}\n" .
             "⏱️ *Duration:* {$downSince->diffForHumans()}\n\n" .
-            "🔗 [View Dashboard]({$url})\n\n" .
             "🤖 *Sender:* NOC Skynet\n" .
             "⚠️ _Disclaimer: This is an automatic message._";
             
