@@ -76,7 +76,7 @@ class RoutersTable
                 //
             ])
             ->actions([
-                \Filament\Tables\Actions\Action::make('refresh')
+                \Filament\Actions\Action::make('refresh')
                     ->label('Refresh Data')
                     ->icon('heroicon-o-arrow-path')
                     ->color('info')
@@ -88,12 +88,12 @@ class RoutersTable
                             ->success()
                             ->send();
                     }),
-                \Filament\Tables\Actions\EditAction::make(),
+                \Filament\Actions\EditAction::make(),
             ])
             ->bulkActions([
-                \Filament\Tables\Actions\BulkActionGroup::make([
-                    \Filament\Tables\Actions\DeleteBulkAction::make(),
-                    \Filament\Tables\Actions\BulkAction::make('refresh_selected')
+                \Filament\Actions\BulkActionGroup::make([
+                    \Filament\Actions\DeleteBulkAction::make(),
+                    \Filament\Actions\BulkAction::make('refresh_selected')
                         ->label('Refresh Selected')
                         ->icon('heroicon-o-arrow-path')
                         ->color('info')
