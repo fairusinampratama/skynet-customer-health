@@ -57,9 +57,15 @@ class RoutersTable
                     ->numeric()
                     ->sortable(),
                     
-                IconColumn::make('is_active')
-                    ->boolean()
-                    ->label('Active'),
+                \Filament\Tables\Columns\ToggleColumn::make('is_active')
+                    ->label('Active')
+                    ->onColor('success')
+                    ->offColor('danger')
+                    ->afterStateUpdated(function ($record, $state) {
+                         if ($state) {
+                             \App\Jobs\CheckRouterHealth::dispatch($record);
+                         }
+                    }),
 
                 TextColumn::make('last_seen')
                     ->since()
@@ -69,12 +75,38 @@ class RoutersTable
             ->filters([
                 //
             ])
-            ->recordActions([
-                EditAction::make(),
+            ->actions([
+                \Filament\Tables\Actions\Action::make('refresh')
+                    ->label('Refresh Data')
+                    ->icon('heroicon-o-arrow-path')
+                    ->color('info')
+                    ->action(function ($record) {
+                        \App\Jobs\CheckRouterHealth::dispatch($record);
+                        \Filament\Notifications\Notification::make()
+                            ->title('Refreshing...')
+                            ->body('Health check queued for ' . $record->name)
+                            ->success()
+                            ->send();
+                    }),
+                \Filament\Tables\Actions\EditAction::make(),
             ])
-            ->toolbarActions([
-                BulkActionGroup::make([
-                    DeleteBulkAction::make(),
+            ->bulkActions([
+                \Filament\Tables\Actions\BulkActionGroup::make([
+                    \Filament\Tables\Actions\DeleteBulkAction::make(),
+                    \Filament\Tables\Actions\BulkAction::make('refresh_selected')
+                        ->label('Refresh Selected')
+                        ->icon('heroicon-o-arrow-path')
+                        ->color('info')
+                        ->action(function (\Illuminate\Database\Eloquent\Collection $records) {
+                            foreach ($records as $record) {
+                                \App\Jobs\CheckRouterHealth::dispatch($record);
+                            }
+                            \Filament\Notifications\Notification::make()
+                                ->title('Refreshing Selected...')
+                                ->body('Health checks queued for ' . $records->count() . ' routers.')
+                                ->success()
+                                ->send();
+                        }),
                 ]),
             ]);
     }
