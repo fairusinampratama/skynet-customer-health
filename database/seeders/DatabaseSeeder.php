@@ -22,11 +22,11 @@ class DatabaseSeeder extends Seeder
             'password' => bcrypt('password'),
         ]);
 
-        $this->call([
-            XlsxImportSeeder::class,
-            ServerImportSeeder::class,
-            IsolationStateSeeder::class,
-            DummyAreaSeeder::class,
-        ]);
+        // $this->call([
+        //     XlsxImportSeeder::class,
+        //     ServerImportSeeder::class,
+        //     IsolationStateSeeder::class,
+        //     DummyAreaSeeder::class,
+        // ]);
     }
 }
