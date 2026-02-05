@@ -96,7 +96,8 @@ class RoutersTable
                         try {
                             $start = microtime(true);
                             $service = app(\App\Services\MikrotikService::class);
-                            $service->fetchHealth($record);
+                            $metrics = $service->fetchHealth($record);
+                            $record->update($metrics); // Save the data!
                             $duration = round((microtime(true) - $start) * 1000, 2);
                             
                             \Filament\Notifications\Notification::make()
