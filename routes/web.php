@@ -13,6 +13,7 @@ Route::get('/login', function () {
 })->name('login');
 
 Route::get('/tv/areas', [TvController::class, 'areas']);
+Route::get('/tv/areas/{slug}', [TvController::class, 'area'])->name('tv.area');
 Route::get('/tv/servers', [TvController::class, 'servers']);
 
 
