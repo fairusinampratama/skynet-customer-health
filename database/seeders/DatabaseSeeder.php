@@ -16,11 +16,14 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         // Create Admin User
-        \App\Models\User::factory()->create([
-            'name' => 'Admin',
-            'email' => 'admin@akt.com',
-            'password' => bcrypt('password'),
-        ]);
+        // Create Admin User
+        \App\Models\User::firstOrCreate(
+            ['email' => 'admin@akt.com'],
+            [
+                'name' => 'Admin',
+                'password' => bcrypt('password'),
+            ]
+        );
 
         // $this->call([
         //     XlsxImportSeeder::class,
