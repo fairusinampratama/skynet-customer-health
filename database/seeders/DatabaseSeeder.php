@@ -17,11 +17,11 @@ class DatabaseSeeder extends Seeder
     {
         // Create Admin User
         // Create Admin User
-        \App\Models\User::firstOrCreate(
+        \App\Models\User::updateOrCreate(
             ['email' => 'admin@akt.com'],
             [
                 'name' => 'Admin',
-                'password' => bcrypt('password'),
+                'password' => 'password',
             ]
         );
 
