@@ -35,6 +35,6 @@ else
 fi
 
 $CONCURRENTLY -c "#93c5fd,#c4b5fd,#fb7185" \
-    "php artisan serve --host=0.0.0.0 --port=8000" \
+    "php artisan serve --host=0.0.0.0 --port=3000" \
     "php artisan schedule:work" \
     "php artisan queue:work --tries=3"
