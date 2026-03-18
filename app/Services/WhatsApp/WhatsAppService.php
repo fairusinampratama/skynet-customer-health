@@ -120,4 +120,57 @@ class WhatsAppService
             return false;
         }
     }
+
+    /**
+     * Send an image to a Whatspie Group.
+     *
+     * @param string $groupId
+     * @param string $fileUrl Publicly accessible URL of the image
+     * @param string $caption
+     * @return bool
+     */
+    public function sendImageToGroup(string $groupId, string $fileUrl, string $caption = ''): bool
+    {
+        if (!$this->token || !$this->device) {
+            Log::warning('WhatsApp Service: Token or Device ID not configured.');
+            return false;
+        }
+
+        // Whatspie Endpoint: POST /groups/{group_id}/send
+        // Payload: type=image, device=..., params={image: {url: ...}, caption: ...}
+        $endpoint = "{$this->baseUrl}/groups/{$groupId}/send";
+
+        try {
+            $response = Http::withToken($this->token)
+                ->post($endpoint, [
+                    'device' => $this->device,
+                    'type' => 'image',
+                    'params' => [
+                        'image' => [
+                            'url' => $fileUrl,
+                        ],
+                        'caption' => $caption,
+                    ]
+                ]);
+
+            if ($response->successful()) {
+                Log::info('WhatsApp Service: Image sent successfully.', [
+                    'recipient' => $groupId,
+                    'response' => $response->json()
+                ]);
+                return true;
+            }
+
+            Log::error('WhatsApp Service: Failed to send image to group.', [
+                'endpoint' => $endpoint,
+                'status' => $response->status(),
+                'body' => $response->body(),
+            ]);
+
+            return false;
+        } catch (\Exception $e) {
+            Log::error('WhatsApp Service: Exception sending image.', ['error' => $e->getMessage()]);
+            return false;
+        }
+    }
 }

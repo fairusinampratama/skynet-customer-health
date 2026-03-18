@@ -82,49 +82,57 @@ class SendDailyErrorReport extends Command
             // return; 
         }
 
-        // 3. Generate PDF
-        $pdf = Pdf::loadView('reports.daily_errors', [
+        $this->info("Generating Image Snapshot...");
+        // 3. Generate Image
+        $html = view('reports.daily_errors', [
             'reportTitle' => $reportTitle,
             'date' => $humanReadableDate,
             'affectedCustomers' => $customers,
-        ]);
+        ])->render();
 
         $safeTitle = \Illuminate\Support\Str::snake($reportTitle);
-        $fileName = "{$safeTitle}_{$dayName}_{$formattedDate}_" . now()->format('H-i-s') . ".pdf";
-        // Whatspie requires a PUBLIC URL. So we must save to the 'public' disk.
-        // Ensure you have run 'php artisan storage:link'
+        $fileName = "{$safeTitle}_{$dayName}_{$formattedDate}_" . now()->format('H-i-s') . ".png";
+        
         $disk = \Illuminate\Support\Facades\Storage::disk('public');
-        if (!$disk->put("reports/{$fileName}", $pdf->output())) {
-            $this->error("Failed to write PDF to disk!");
+        $tempPath = storage_path("app/public/reports/{$fileName}");
+        
+        // Ensure directory exists
+        if (!file_exists(storage_path("app/public/reports"))) {
+            mkdir(storage_path("app/public/reports"), 0755, true);
+        }
+
+        \Spatie\Browsershot\Browsershot::html($html)
+            ->setChromePath('/usr/bin/google-chrome')
+            ->noSandbox()
+            ->windowSize(800, 600)
+            ->deviceScaleFactor(2)
+            ->fullPage()
+            ->save($tempPath);
+
+        if (!file_exists($tempPath)) {
+            $this->error("Failed to write image to disk!");
             return;
         }
 
-        $fullPath = $disk->path("reports/{$fileName}");
-        $this->info("PDF saved to: {$fullPath}");
-        // This ensures WhatsApp sees the correct filename
+        $this->info("Image saved to: {$tempPath}");
         $fileUrl = route('reports.download', ['filename' => $fileName]);
         
-        // Ensure the URL uses the APP_URL (localtunnel in this case)
-        // route() helper usually does this, but forceRootUrl was not set, it might use localhost
-        // For CLI commands, we rely on APP_URL in .env
-        
-        $this->info("PDF saved. Download URL: {$fileUrl}");
+        $this->info("Image saved. Download URL: {$fileUrl}");
 
         // 3. Send via WhatsApp
         $groupId = $this->option('whatsapp_group_id') ?? config('services.whatsapp.audit_group_id', env('WHATSAPP_AUDIT_GROUP_ID'));
 
         if ($groupId) {
             $this->info("Sending to WhatsApp Group ID: {$groupId}");
-            $sent = $whatsAppService->sendDocumentToGroup(
+            $sent = $whatsAppService->sendImageToGroup(
                 $groupId,
                 $fileUrl,
                 "📊 *{$reportTitle}*\n" .
                 "📅 {$humanReadableDate}\n" .
                 "📉 *Issues Found:* {$customers->count()} Customers\n\n" .
-                "📎 _See attached PDF for details._\n\n" .
+                "🖼️ _Snapshot of current critical issues._\n\n" .
                 "🤖 *Sender:* NOC Skynet\n" .
-                "⚠️ _Disclaimer: This is an automatic message._",
-                $fileName
+                "⚠️ _Disclaimer: This is an automatic message._"
             );
 
             if ($sent) {

@@ -18,7 +18,8 @@ nixPkgs = [
     "php84Extensions.tokenizer",
     "nodejs_20",
     "npm-9_x",
-    "iputils"
+    "iputils",
+    "chromium"
 ]
 
 [phases.install]
