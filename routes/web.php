@@ -32,7 +32,10 @@ Route::get('/reports/download/{filename}', function ($filename) {
     }
 
     try {
-        return $disk->download($path);
+        return response()->file($fullPath, [
+            'Content-Type' => 'image/png',
+            'Cache-Control' => 'no-cache, no-store, must-revalidate',
+        ]);
     } catch (\Exception $e) {
         \Illuminate\Support\Facades\Log::error("Download FAILED: " . $e->getMessage());
         throw $e;

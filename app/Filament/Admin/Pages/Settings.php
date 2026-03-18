@@ -124,19 +124,34 @@ class Settings extends Page implements HasForms
                 return; 
             }
 
-            // Generate PDF
-            $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('reports.daily_errors', [
+            // Generate Image
+            $html = view('reports.daily_errors', [
                 'reportTitle' => $reportTitle,
                 'date' => $humanReadableDate,
                 'affectedCustomers' => $customers,
-            ]);
+            ])->render();
 
             $safeTitle = \Illuminate\Support\Str::snake($reportTitle);
-            $fileName = "{$safeTitle}_{$dayName}_{$formattedDate}_" . now()->format('H-i-s') . ".pdf";
+            $fileName = "{$safeTitle}_{$dayName}_{$formattedDate}_" . now()->format('H-i-s') . ".png";
             
             $disk = \Illuminate\Support\Facades\Storage::disk('public');
-            if (!$disk->put("reports/{$fileName}", $pdf->output())) {
-                throw new \Exception("Failed to write PDF to disk!");
+            $tempPath = storage_path("app/public/reports/{$fileName}");
+            
+            // Ensure directory exists
+            if (!file_exists(storage_path("app/public/reports"))) {
+                mkdir(storage_path("app/public/reports"), 0755, true);
+            }
+
+            \Spatie\Browsershot\Browsershot::html($html)
+                ->setChromePath('/usr/bin/google-chrome')
+                ->noSandbox()
+                ->windowSize(800, 600)
+                ->deviceScaleFactor(2)
+                ->fullPage()
+                ->save($tempPath);
+
+            if (!file_exists($tempPath)) {
+                throw new \Exception("Failed to write image to disk!");
             }
 
             // URL for WhatsApp
@@ -146,16 +161,15 @@ class Settings extends Page implements HasForms
             $groupId = config('services.whatsapp.audit_group_id', env('WHATSAPP_AUDIT_GROUP_ID'));
 
             if ($groupId) {
-                $sent = $whatsAppService->sendDocumentToGroup(
+                $sent = $whatsAppService->sendImageToGroup(
                     $groupId,
                     $fileUrl,
                     "📊 *{$reportTitle}*\n" .
                     "📅 {$humanReadableDate}\n" .
                     "📉 *Issues Found:* {$customers->count()} Customers\n\n" .
-                    "📎 _See attached PDF for details._\n\n" .
+                    "🖼️ _Snapshot of current critical issues._\n\n" .
                     "🤖 *Sender:* NOC Skynet\n" .
-                    "⚠️ _Disclaimer: This is an automatic message._",
-                    $fileName
+                    "⚠️ _Disclaimer: This is an automatic message._"
                 );
 
                 if ($sent) {

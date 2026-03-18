@@ -45,46 +45,56 @@ class SendDailyErrorReportJob implements ShouldQueue
                 return; 
             }
 
-            Log::info('Generating PDF...');
-            // Generate PDF
-            $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('reports.daily_errors', [
+            Log::info('Generating Image...');
+            // Generate HTML from view
+            $html = view('reports.daily_errors', [
                 'reportTitle' => $reportTitle,
                 'date' => $humanReadableDate,
                 'affectedCustomers' => $customers,
-            ]);
+            ])->render();
 
             $safeTitle = \Illuminate\Support\Str::snake($reportTitle);
-            $fileName = "{$safeTitle}_{$dayName}_{$formattedDate}_" . now()->format('H-i-s') . ".pdf";
+            $fileName = "{$safeTitle}_{$dayName}_{$formattedDate}_" . now()->format('H-i-s') . ".png";
             
-            Log::info('Saving PDF to disk...');
+            Log::info('Saving Image to disk using Browsershot...');
             $disk = \Illuminate\Support\Facades\Storage::disk('public');
-            if (!$disk->put("reports/{$fileName}", $pdf->output())) {
-                throw new \Exception("Failed to write PDF to disk!");
+            $tempPath = storage_path("app/public/reports/{$fileName}");
+            
+            // Ensure directory exists
+            if (!file_exists(storage_path("app/public/reports"))) {
+                mkdir(storage_path("app/public/reports"), 0755, true);
             }
 
-            $fullPath = $disk->path("reports/{$fileName}");
-            // Use config app.url if available to ensure correct domain in queue context
-            // But route() should work if configured correctly.
-            // fallback to relative if needed, but WhatsApp needs public URL.
+            \Spatie\Browsershot\Browsershot::html($html)
+                ->setChromePath('/usr/bin/google-chrome')
+                ->noSandbox()
+                ->windowSize(800, 600)
+                ->deviceScaleFactor(2) // Higher quality
+                ->fullPage()
+                ->save($tempPath);
+
+            if (!file_exists($tempPath)) {
+                throw new \Exception("Failed to write image to disk!");
+            }
+
             $fileUrl = route('reports.download', ['filename' => $fileName]);
             
-            Log::info("PDF saved. URL: {$fileUrl}");
+            Log::info("Image saved. URL: {$fileUrl}");
 
             // Send via WhatsApp
             $groupId = config('services.whatsapp.audit_group_id', env('WHATSAPP_AUDIT_GROUP_ID'));
 
             if ($groupId) {
                 Log::info("Sending to WhatsApp Group ID: {$groupId}");
-                $sent = $whatsAppService->sendDocumentToGroup(
+                $sent = $whatsAppService->sendImageToGroup(
                     $groupId,
                     $fileUrl,
                     "📊 *{$reportTitle}*\n" .
                     "📅 {$humanReadableDate}\n" .
                     "📉 *Issues Found:* {$customers->count()} Customers\n\n" .
-                    "📎 _See attached PDF for details._\n\n" .
+                    "🖼️ _Snapshot of current critical issues._\n\n" .
                     "🤖 *Sender:* NOC Skynet\n" .
-                    "⚠️ _Disclaimer: This is an automatic message._",
-                    $fileName
+                    "⚠️ _Disclaimer: This is an automatic message._"
                 );
 
                 if ($sent) {
