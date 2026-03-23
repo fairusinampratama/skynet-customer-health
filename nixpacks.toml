@@ -8,6 +8,8 @@ nixPkgs = [
     "php84Extensions.pdo_mysql",
     "php84Extensions.bcmath",
     "php84Extensions.sockets",
+    "php84Extensions.gd",
+    "php84Extensions.intl",
     "php84Extensions.xml",
     "php84Extensions.mbstring",
     "php84Extensions.ctype",
