@@ -18,6 +18,7 @@ nixPkgs = [
     "php84Extensions.tokenizer",
     "nodejs_20",
     "npm-9_x",
+    "python311Packages.supervisor",
     "iputils"
 ]
 
@@ -33,4 +34,6 @@ cmds = [
 ]
 
 [start]
-cmd = "chmod -R 777 storage bootstrap/cache && php artisan storage:link && php artisan optimize && php artisan migrate --force && npx concurrently -c \"#93c5fd,#c4b5fd,#fb7185\" \"php artisan serve --host=0.0.0.0 --port=8000\" \"php artisan schedule:work\" \"php artisan queue:work --tries=3\""
+cmd = "php artisan storage:link && php artisan optimize && php artisan migrate --force && /usr/bin/supervisord -c supervisord.conf"
+# Note: Path to supervisord might vary in Nix, usually just 'supervisord' works if in PATH.
+# We'll use just 'supervisord' and ensure it's in the nixPkgs.
