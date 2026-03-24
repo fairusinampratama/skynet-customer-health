@@ -16,6 +16,8 @@ nixPkgs = [
     "php84Extensions.fileinfo",
     "php84Extensions.filter",
     "php84Extensions.tokenizer",
+    "php84Extensions.pcntl",
+    "php84Extensions.posix",
     "nodejs_20",
     "npm-9_x",
     "python311Packages.supervisor",
@@ -34,6 +36,6 @@ cmds = [
 ]
 
 [start]
-cmd = "php artisan storage:link && php artisan optimize && php artisan migrate --force && /usr/bin/supervisord -c supervisord.conf"
+cmd = "sh deploy.sh && supervisord -c supervisord.conf"
 # Note: Path to supervisord might vary in Nix, usually just 'supervisord' works if in PATH.
 # We'll use just 'supervisord' and ensure it's in the nixPkgs.
