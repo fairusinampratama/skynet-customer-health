@@ -104,7 +104,7 @@ class WhatsAppService
                         $deliveryUrl = str_replace('http://tmpfiles.org/', 'https://tmpfiles.org/dl/', $viewerUrl);
                         Log::info("WhatsApp Service: PDF uploaded to tmpfiles.org: {$deliveryUrl}");
                     } else {
-                        Log::warning("WhatsApp Service: tmpfiles.org upload failed, falling back to original URL.");
+                        Log::error("WhatsApp Service: tmpfiles.org upload FAILED. Status: " . $uploadResponse->status() . " Body: " . $uploadResponse->body() . " — falling back to original URL.");
                     }
                 }
 
