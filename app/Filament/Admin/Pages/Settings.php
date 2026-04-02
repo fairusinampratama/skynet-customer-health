@@ -143,7 +143,7 @@ class Settings extends Page implements HasForms
             $fileUrl = route('reports.download', ['filename' => $fileName]);
             
             // Send via WhatsApp
-            $groupId = config('services.whatsapp.audit_group_id', env('WHATSAPP_AUDIT_GROUP_ID'));
+            $groupId = config('services.whatsapp.audit_group_id');
 
             if ($groupId) {
                 $sent = $whatsAppService->sendDocumentToGroup(

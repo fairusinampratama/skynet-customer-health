@@ -35,4 +35,16 @@ return [
         ],
     ],
 
+    'whatsapp' => [
+        'base_url' => env('WHATSAPP_BASE_URL', 'https://api.whatspie.com'),
+        'token' => env('WHATSAPP_TOKEN'),
+        'device_id' => env('WHATSAPP_DEVICE_ID'),
+        'audit_group_id' => env('WHATSAPP_AUDIT_GROUP_ID'),
+    ],
+
+    'telegram' => [
+        'bot_token' => env('TELEGRAM_BOT_TOKEN'),
+        'chat_id' => env('TELEGRAM_CHAT_ID'),
+    ],
+
 ];
