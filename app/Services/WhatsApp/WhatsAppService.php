@@ -13,9 +13,9 @@ class WhatsAppService
 
     public function __construct()
     {
-        $this->baseUrl = config('services.whatsapp.base_url', env('WHATSAPP_BASE_URL', 'https://api.whatspie.com'));
-        $this->token = config('services.whatsapp.token', env('WHATSAPP_TOKEN', ''));
-        $this->device = config('services.whatsapp.device_id', env('WHATSAPP_DEVICE_ID', ''));
+        $this->baseUrl = config('services.whatsapp.base_url');
+        $this->token = config('services.whatsapp.token');
+        $this->device = config('services.whatsapp.device_id');
     }
 
     /**

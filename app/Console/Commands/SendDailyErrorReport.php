@@ -111,7 +111,7 @@ class SendDailyErrorReport extends Command
         $this->info("PDF saved. Download URL: {$fileUrl}");
 
         // 3. Send via WhatsApp
-        $groupId = $this->option('whatsapp_group_id') ?? config('services.whatsapp.audit_group_id', env('WHATSAPP_AUDIT_GROUP_ID'));
+        $groupId = $this->option('whatsapp_group_id') ?? config('services.whatsapp.audit_group_id');
 
         if ($groupId) {
             $this->info("Sending to WhatsApp Group ID: {$groupId}");

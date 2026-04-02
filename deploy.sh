@@ -7,6 +7,14 @@ set -e
 
 echo "🚀 Starting Skynet Customer Health deployment..."
 
+# 0. Wait for database to be ready
+echo "⏳ Waiting for database connection..."
+until php artisan db:show > /dev/null 2>&1; do
+  echo "  (Still waiting for database...)"
+  sleep 2
+done
+echo "📡 Database is ready!"
+
 # 1. Create storage symlink (ignore if exists)
 echo "🔗 Creating storage symlink..."
 php artisan storage:link --force || true

@@ -410,8 +410,8 @@ class HealthCheckCommand extends Command
 
     protected function sendTelegramAlert(Customer $customer, $downSince)
     {
-        $token = env('TELEGRAM_BOT_TOKEN');
-        $chatId = env('TELEGRAM_CHAT_ID');
+        $token = config('services.telegram.bot_token');
+        $chatId = config('services.telegram.chat_id');
 
         if (! $token || ! $chatId) {
             $this->warn("Telegram credentials not set for {$customer->name}");
