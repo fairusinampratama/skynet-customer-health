@@ -87,25 +87,25 @@ class WhatsAppService
         $endpoint = "{$this->baseUrl}/groups/{$groupId}/send";
 
         try {
-            $response = Http::withToken($this->token)
-                ->post($endpoint, [
-                    'device' => $this->device,
-                    'type' => 'file',
-                    'params' => [
-                        'document' => [
-                            'url' => $fileUrl,
-                            // 'filename' => $filename, // Removed as it causes API error
-                        ], 
-                        'caption' => $caption,
-                    ]
-                ]);
-
-            if ($response->successful()) {
-                Log::info('WhatsApp Service: Document sent successfully.', [
-                    'recipient' => $groupId, 
-                    'response' => $response->json()
-                ]);
-                return true;
+            if (!empty($fileUrl)) {
+                $response = Http::withToken($this->token)
+                    ->post($endpoint, [
+                        'device' => $this->device,
+                        'type' => 'file',
+                        'params' => [
+                            'document' => [
+                                'url' => $fileUrl,
+                            ], 
+                            'caption' => $caption,
+                        ]
+                    ]);
+                
+                if ($response->successful()) {
+                    Log::info("WhatsApp Service: Document sent successfully. " . $response->body());
+                    return true;
+                }
+                
+                Log::error("WhatsApp Service: Failed to send document. Status: " . $response->status() . " Body: " . $response->body());
             }
 
             Log::error('WhatsApp Service: Failed to send document to group.', [
