@@ -4,6 +4,7 @@ namespace App\Services\WhatsApp;
 
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 
 class WhatsAppService
 {
@@ -14,128 +15,94 @@ class WhatsAppService
     public function __construct()
     {
         $this->baseUrl = config('services.whatsapp.base_url');
-        $this->token = config('services.whatsapp.token');
-        $this->device = config('services.whatsapp.device_id');
+        $this->token   = config('services.whatsapp.token');
+        $this->device  = config('services.whatsapp.device_id');
     }
 
     /**
-     * Send a text message to a generic recipient (generic implementation left for reference).
-     */
-    /**
      * Send a text message to a Whatspie Group.
-     * 
-     * @param string $groupId
-     * @param string $message
-     * @return bool
      */
     public function sendMessageToGroup(string $groupId, string $message): bool
     {
-        if (!$this->token || !$this->device) {
-            Log::warning('WhatsApp Service: Token or Device ID not configured.');
-            return false;
-        }
-
-        $endpoint = "{$this->baseUrl}/groups/{$groupId}/send";
-
-        try {
-            $response = Http::withToken($this->token)
-                ->post($endpoint, [
-                    'device' => $this->device,
-                    'type' => 'chat', 
-                    'params' => [
-                        'text' => $message,
-                    ]
-                ]);
-
-            if ($response->successful()) {
-                Log::info('WhatsApp Service: Message sent successfully.', [
-                    'recipient' => $groupId
-                ]);
-                return true;
-            }
-
-            Log::error('WhatsApp Service: Failed to send message to group.', [
-                'endpoint' => $endpoint,
-                'status' => $response->status(),
-                'body' => $response->body(),
-            ]);
-
-            return false;
-        } catch (\Exception $e) {
-            Log::error('WhatsApp Service: Exception sending message.', ['error' => $e->getMessage()]);
-            return false;
-        }
+        return $this->post("/groups/{$groupId}/send", [
+            'type'   => 'chat',
+            'params' => ['text' => $message],
+        ]);
     }
 
     /**
-     * Send a document (PDF) to a Whatspie Group.
-     *
-     * @param string $groupId
-     * @param string $fileUrl Publicly accessible URL of the file
-     * @param string $caption
-     * @return bool
+     * Send a PDF document to a Whatspie Group.
+     * Uploads the file to catbox.moe first so Whatspie can download it reliably.
      */
-    public function sendDocumentToGroup(string $groupId, string $fileUrl, string $caption = '', ?string $filename = null): bool
+    public function sendDocumentToGroup(string $groupId, string $caption, string $filePath): bool
+    {
+        $url = $this->uploadToCatbox($filePath);
+
+        return $this->post("/groups/{$groupId}/send", [
+            'type'   => 'file',
+            'params' => [
+                'document' => ['url' => $url],
+                'caption'  => $caption,
+            ],
+        ]);
+    }
+
+    /**
+     * Upload a local file to catbox.moe and return the public URL.
+     * Falls back to local Storage::url() if upload fails.
+     */
+    private function uploadToCatbox(string $filePath): string
+    {
+        $fallback = Storage::disk('public')->url(
+            'reports/' . basename($filePath)
+        );
+
+        try {
+            $response = Http::attach(
+                'fileToUpload',
+                file_get_contents($filePath),
+                basename($filePath),
+                ['Content-Type' => 'application/pdf']
+            )->post('https://catbox.moe/user/api.php', ['reqtype' => 'fileupload']);
+
+            if ($response->successful() && str_starts_with($response->body(), 'https://')) {
+                $url = trim($response->body());
+                Log::info("WhatsApp: Uploaded to catbox.moe: {$url}");
+                return $url;
+            }
+        } catch (\Exception $e) {
+            Log::warning("WhatsApp: catbox.moe upload exception: " . $e->getMessage());
+        }
+
+        Log::warning("WhatsApp: catbox.moe upload failed, using fallback URL: {$fallback}");
+        return $fallback;
+    }
+
+    /**
+     * Make a POST request to the Whatspie API.
+     */
+    private function post(string $path, array $payload): bool
     {
         if (!$this->token || !$this->device) {
-            Log::warning('WhatsApp Service: Token or Device ID not configured.');
+            Log::warning('WhatsApp: Token or Device ID not configured.');
             return false;
         }
 
-        // Whatspie Endpoint: POST /groups/{group_id}/send
-        // Use the numeric internal group ID (not JID) — this is what Whatspie expects in the URL
-        $endpoint = "{$this->baseUrl}/groups/{$groupId}/send";
+        $endpoint = $this->baseUrl . $path;
+        $payload  = array_merge(['device' => $this->device], $payload);
 
         try {
-            if (!empty($fileUrl)) {
-                // Upload to catbox.moe — permanent direct-download CDN with no cookies/middleware
-                // This ensures Whatspie's download server can always fetch the file
-                $deliveryUrl = $fileUrl; // fallback
-                if ($filename) {
-                    $filePath = \Illuminate\Support\Facades\Storage::disk('public')->path("reports/{$filename}");
-                    $catboxResponse = Http::attach(
-                        'fileToUpload', file_get_contents($filePath), $filename, ['Content-Type' => 'application/pdf']
-                    )->post('https://catbox.moe/user/api.php', [
-                        'reqtype' => 'fileupload',
-                    ]);
+            $response = Http::withToken($this->token)->post($endpoint, $payload);
 
-                    if ($catboxResponse->successful() && str_starts_with($catboxResponse->body(), 'https://')) {
-                        $deliveryUrl = trim($catboxResponse->body());
-                        Log::info("WhatsApp Service: PDF uploaded to catbox.moe: {$deliveryUrl}");
-                    } else {
-                        Log::error("WhatsApp Service: catbox.moe upload failed. Status: " . $catboxResponse->status() . " — using fallback URL.");
-                    }
-                }
-
-                $response = Http::withToken($this->token)
-                    ->post($endpoint, [
-                        'device' => $this->device,
-                        'type' => 'file',
-                        'params' => [
-                            'document' => [
-                                'url' => $deliveryUrl,
-                            ],
-                            'caption' => $caption,
-                        ]
-                    ]);
-
-                if ($response->successful()) {
-                    Log::info("WhatsApp Service: Document sent successfully. " . $response->body());
-                    return true;
-                }
-
-                Log::error("WhatsApp Service: Failed to send document. Status: " . $response->status() . " Body: " . $response->body());
+            if ($response->successful()) {
+                Log::info("WhatsApp: {$path} OK — " . $response->body());
+                return true;
             }
 
-            Log::error('WhatsApp Service: Failed to send document to group.', [
-                'endpoint' => $endpoint,
-                'status' => $response->status() ?? null,
-                'body' => $response->body() ?? null,
-            ]);
-
+            Log::error("WhatsApp: {$path} failed [{$response->status()}] — " . $response->body());
             return false;
         } catch (\Exception $e) {
-            Log::error('WhatsApp Service: Exception sending document.', ['error' => $e->getMessage()]);
+            Log::error("WhatsApp: Exception on {$path} — " . $e->getMessage());
             return false;
         }
     }

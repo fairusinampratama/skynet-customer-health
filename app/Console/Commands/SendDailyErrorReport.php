@@ -95,10 +95,6 @@ class SendDailyErrorReport extends Command
 
         $fullPath = $disk->path("reports/{$fileName}");
         $this->info("PDF saved to: {$fullPath}");
-        // This ensures WhatsApp sees the correct filename
-        $fileUrl = \Illuminate\Support\Facades\Storage::disk('public')->url("reports/{$fileName}");
-        
-        $this->info("PDF saved. Download URL: {$fileUrl}");
 
         // 3. Send via WhatsApp
         $groupId = $this->option('whatsapp_group_id') ?? config('services.whatsapp.audit_group_id');
@@ -106,24 +102,14 @@ class SendDailyErrorReport extends Command
         if ($groupId) {
             $this->info("Sending to WhatsApp Group ID: {$groupId}...");
 
-            $message = "📊 *{$reportTitle}*\n" .
-                "📅 {$humanReadableDate}\n" .
-                "📉 *Issues Found:* {$customers->count()} Customers\n\n" .
-                "📎 *Download Report:*\n{$fileUrl}\n\n" .
-                "🤖 *Sender:* NOC Skynet\n" .
-                "⚠️ _Disclaimer: This is an automatic message._";
-
-            $sent = $whatsAppService->sendDocumentToGroup(
-                $groupId,
-                $fileUrl,
-                "📊 *{$reportTitle}*\n" .
+            $caption = "📊 *{$reportTitle}*\n" .
                 "📅 {$humanReadableDate}\n" .
                 "📉 *Issues Found:* {$customers->count()} Customers\n\n" .
                 "📎 _See attached PDF for details._\n\n" .
                 "🤖 *Sender:* NOC Skynet\n" .
-                "⚠️ _Disclaimer: This is an automatic message._",
-                $fileName
-            );
+                "⚠️ _Disclaimer: This is an automatic message._";
+
+            $sent = $whatsAppService->sendDocumentToGroup($groupId, $caption, $fullPath);
 
             if ($sent) {
                 $this->info("Report sent successfully.");
