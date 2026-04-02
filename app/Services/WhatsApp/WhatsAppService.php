@@ -88,34 +88,15 @@ class WhatsAppService
 
         try {
             if (!empty($fileUrl)) {
-                // Step 1: Upload PDF to tmpfiles.org so Whatspie's servers can download it
-                // (Whatspie cannot reach our production domain directly)
-                $deliveryUrl = $fileUrl; // fallback to original URL
-                if ($filename) {
-                    $filePath = \Illuminate\Support\Facades\Storage::disk('public')->path("reports/{$filename}");
-                    $uploadResponse = Http::attach('file', file_get_contents($filePath), $filename)
-                        ->post('https://tmpfiles.org/api/v1/upload');
-                    
-                    if ($uploadResponse->successful()) {
-                        $viewerUrl = $uploadResponse->json('data.url');
-                        // Convert to HTTPS direct download URL
-                        // Input:  http://tmpfiles.org/31745583/file.pdf
-                        // Output: https://tmpfiles.org/dl/31745583/file.pdf
-                        $deliveryUrl = str_replace('http://tmpfiles.org/', 'https://tmpfiles.org/dl/', $viewerUrl);
-                        Log::info("WhatsApp Service: PDF uploaded to tmpfiles.org: {$deliveryUrl}");
-                    } else {
-                        Log::error("WhatsApp Service: tmpfiles.org upload FAILED. Status: " . $uploadResponse->status() . " Body: " . $uploadResponse->body() . " — falling back to original URL.");
-                    }
-                }
-
-                // Step 2: Send to Whatspie with the public CDN URL
+                // Use the direct static file URL (Storage::url() gives /storage/reports/... served by Caddy)
+                // This serves the PDF with no cookies/middleware — Whatspie can download it cleanly
                 $response = Http::withToken($this->token)
                     ->post($endpoint, [
                         'device' => $this->device,
                         'type' => 'file',
                         'params' => [
                             'document' => [
-                                'url' => $deliveryUrl,
+                                'url' => $fileUrl,
                             ],
                             'caption' => $caption,
                         ]
