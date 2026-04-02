@@ -71,7 +71,7 @@ class SendDailyErrorReportJob implements ShouldQueue
             Log::info("PDF saved. URL: {$fileUrl}");
 
             // Send via WhatsApp
-            $groupId = config('services.whatsapp.audit_group_id', env('WHATSAPP_AUDIT_GROUP_ID'));
+            $groupId = config('services.whatsapp.audit_group_id');
 
             if ($groupId) {
                 Log::info("Sending to WhatsApp Group ID: {$groupId}");
