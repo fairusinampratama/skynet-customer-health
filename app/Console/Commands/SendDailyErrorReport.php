@@ -53,30 +53,15 @@ class SendDailyErrorReport extends Command
         } else {
             $reportTitle = "Night Error Report ({$hour}:00)";
         }
-        
         // Or simply:
         $reportTitle = "Error Report - " . now()->format('H-i');
 
         $this->info("Generating {$reportTitle} for {$humanReadableDate}...");
 
-        $this->info("Fetching customer data...");
-        $today = Carbon::today();
-        $tomorrow = Carbon::today()->addDay();
-
-        $this->info("Querying database (this might take a moment if many customers)...");
-        // 1. Fetch data using the reusable scope for CRITICAL issues (Matches Dashboard)
-        // This gets everyone who is currently down for > 5 minutes
+        $this->info("Querying database...");
+        // Fetch critically down customers — no subquery count, fast lookup using indexes
         $customers = Customer::criticallyDown()
             ->with('area')
-             // RESTORE SAFETY: Limit to 1 record to prevent loading entire history
-            ->with(['healthChecks' => function ($q) {
-                $q->latest('checked_at')->limit(1);
-            }])
-            // Count for PDF logic
-            ->withCount(['healthChecks' => function ($q) use ($today, $tomorrow) {
-                $q->whereBetween('checked_at', [$today, $tomorrow])
-                  ->where('status', 'down');
-            }])
             ->get();
 
         $this->info("Found {$customers->count()} critical issues (Current Down > 5 mins).");

@@ -65,33 +65,9 @@
                         <td>{{ $customer->name }}</td>
                         <td>{{ $customer->area->name ?? 'N/A' }}</td>
                         <td>{{ $customer->ip_address }}</td>
-                        {{-- checks run every minute, so count = minutes --}}
-                        <td>
-                            @php
-                                $minutes = $customer->health_checks_count;
-                                $hours = floor($minutes / 60);
-                                $remainingMinutes = $minutes % 60;
-                                
-                                $parts = [];
-                                if ($hours > 0) {
-                                    $parts[] = $hours . ' ' . ($hours == 1 ? 'hour' : 'hours');
-                                }
-                                
-                                if ($remainingMinutes > 0 || count($parts) == 0) {
-                                    $parts[] = $remainingMinutes . ' ' . ($remainingMinutes == 1 ? 'minute' : 'minutes');
-                                }
-                                
-                                $durationString = implode(' ', $parts);
-                            @endphp
-                            {{ $durationString }}
-                        </td>
-                        <td>
-                             @if($customer->healthChecks->isNotEmpty())
-                                {{ $customer->healthChecks->first()->checked_at }}
-                             @else
-                                N/A
-                             @endif
-                        </td>
+                        {{-- Downtime calculated from updated_at (when status changed to 'down') --}}
+                        <td>{{ $customer->updated_at->diffForHumans(null, true) }}</td>
+                        <td>{{ $customer->updated_at->format('Y-m-d H:i:s') }}</td>
                     </tr>
                 @endforeach
             </tbody>
