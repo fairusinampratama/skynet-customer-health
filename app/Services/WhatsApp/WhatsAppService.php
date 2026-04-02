@@ -88,15 +88,32 @@ class WhatsAppService
 
         try {
             if (!empty($fileUrl)) {
-                // Use the proven structure: type=file, params.document.url
-                // Whatspie only allows 'url' inside params.document
+                // Step 1: Upload PDF to tmpfiles.org so Whatspie's servers can download it
+                // (Whatspie cannot reach our production domain directly)
+                $deliveryUrl = $fileUrl; // fallback to original URL
+                if ($filename) {
+                    $filePath = \Illuminate\Support\Facades\Storage::disk('public')->path("reports/{$filename}");
+                    $uploadResponse = Http::attach('file', file_get_contents($filePath), $filename)
+                        ->post('https://tmpfiles.org/api/v1/upload');
+                    
+                    if ($uploadResponse->successful()) {
+                        $viewerUrl = $uploadResponse->json('data.url');
+                        // Convert viewer URL to direct download URL: /31745583/file.pdf → /dl/31745583/file.pdf
+                        $deliveryUrl = str_replace('tmpfiles.org/', 'tmpfiles.org/dl/', $viewerUrl);
+                        Log::info("WhatsApp Service: PDF uploaded to tmpfiles.org: {$deliveryUrl}");
+                    } else {
+                        Log::warning("WhatsApp Service: tmpfiles.org upload failed, falling back to original URL.");
+                    }
+                }
+
+                // Step 2: Send to Whatspie with the public CDN URL
                 $response = Http::withToken($this->token)
                     ->post($endpoint, [
                         'device' => $this->device,
                         'type' => 'file',
                         'params' => [
                             'document' => [
-                                'url' => $fileUrl,
+                                'url' => $deliveryUrl,
                             ],
                             'caption' => $caption,
                         ]
