@@ -98,8 +98,10 @@ class WhatsAppService
                     
                     if ($uploadResponse->successful()) {
                         $viewerUrl = $uploadResponse->json('data.url');
-                        // Convert viewer URL to direct download URL: /31745583/file.pdf → /dl/31745583/file.pdf
-                        $deliveryUrl = str_replace('tmpfiles.org/', 'tmpfiles.org/dl/', $viewerUrl);
+                        // Convert to HTTPS direct download URL
+                        // Input:  http://tmpfiles.org/31745583/file.pdf
+                        // Output: https://tmpfiles.org/dl/31745583/file.pdf
+                        $deliveryUrl = str_replace('http://tmpfiles.org/', 'https://tmpfiles.org/dl/', $viewerUrl);
                         Log::info("WhatsApp Service: PDF uploaded to tmpfiles.org: {$deliveryUrl}");
                     } else {
                         Log::warning("WhatsApp Service: tmpfiles.org upload failed, falling back to original URL.");
