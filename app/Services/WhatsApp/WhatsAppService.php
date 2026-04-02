@@ -83,11 +83,13 @@ class WhatsAppService
         }
 
         // Whatspie Endpoint: POST /groups/{group_id}/send
-        // Payload: type=file, device=..., params={file_url: ..., caption: ...}
+        // Use the numeric internal group ID (not JID) — this is what Whatspie expects in the URL
         $endpoint = "{$this->baseUrl}/groups/{$groupId}/send";
 
         try {
             if (!empty($fileUrl)) {
+                // Use the proven structure: type=file, params.document.url
+                // Whatspie only allows 'url' inside params.document
                 $response = Http::withToken($this->token)
                     ->post($endpoint, [
                         'device' => $this->device,
@@ -95,23 +97,23 @@ class WhatsAppService
                         'params' => [
                             'document' => [
                                 'url' => $fileUrl,
-                            ], 
+                            ],
                             'caption' => $caption,
                         ]
                     ]);
-                
+
                 if ($response->successful()) {
                     Log::info("WhatsApp Service: Document sent successfully. " . $response->body());
                     return true;
                 }
-                
+
                 Log::error("WhatsApp Service: Failed to send document. Status: " . $response->status() . " Body: " . $response->body());
             }
 
             Log::error('WhatsApp Service: Failed to send document to group.', [
                 'endpoint' => $endpoint,
-                'status' => $response->status(),
-                'body' => $response->body(),
+                'status' => $response->status() ?? null,
+                'body' => $response->body() ?? null,
             ]);
 
             return false;
