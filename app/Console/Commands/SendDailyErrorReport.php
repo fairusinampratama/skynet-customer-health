@@ -105,17 +105,15 @@ class SendDailyErrorReport extends Command
 
         if ($groupId) {
             $this->info("Sending to WhatsApp Group ID: {$groupId}...");
-            $sent = $whatsAppService->sendDocumentToGroup(
-                $groupId,
-                $fileUrl,
-                "📊 *{$reportTitle}*\n" .
+
+            $message = "📊 *{$reportTitle}*\n" .
                 "📅 {$humanReadableDate}\n" .
                 "📉 *Issues Found:* {$customers->count()} Customers\n\n" .
-                "📎 _See attached PDF for details._\n\n" .
+                "📎 *Download Report:*\n{$fileUrl}\n\n" .
                 "🤖 *Sender:* NOC Skynet\n" .
-                "⚠️ _Disclaimer: This is an automatic message._",
-                $fileName
-            );
+                "⚠️ _Disclaimer: This is an automatic message._";
+
+            $sent = $whatsAppService->sendMessageToGroup($groupId, $message);
 
             if ($sent) {
                 $this->info("Report sent successfully.");
