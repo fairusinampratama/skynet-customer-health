@@ -99,7 +99,7 @@ class Settings extends Page implements HasForms
             $dayName = $date->format('l');
             $formattedDate = $date->format('Y-m-d');
             $humanReadableDate = $date->format('l, d F Y');
-            $reportTitle = "Error Report - " . now()->format('H:i');
+            $reportTitle = "Error Report - " . now()->format('H-i');
 
             // Fetch data
             $customers = \App\Models\Customer::criticallyDown()

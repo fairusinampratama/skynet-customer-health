@@ -55,7 +55,7 @@ class SendDailyErrorReport extends Command
         }
         
         // Or simply:
-        $reportTitle = "Error Report - " . now()->format('H:i');
+        $reportTitle = "Error Report - " . now()->format('H-i');
 
         $this->info("Generating {$reportTitle} for {$humanReadableDate}...");
 
