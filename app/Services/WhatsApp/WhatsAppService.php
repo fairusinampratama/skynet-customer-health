@@ -88,15 +88,32 @@ class WhatsAppService
 
         try {
             if (!empty($fileUrl)) {
-                // Use the direct static file URL (Storage::url() gives /storage/reports/... served by Caddy)
-                // This serves the PDF with no cookies/middleware — Whatspie can download it cleanly
+                // Upload to catbox.moe — permanent direct-download CDN with no cookies/middleware
+                // This ensures Whatspie's download server can always fetch the file
+                $deliveryUrl = $fileUrl; // fallback
+                if ($filename) {
+                    $filePath = \Illuminate\Support\Facades\Storage::disk('public')->path("reports/{$filename}");
+                    $catboxResponse = Http::attach(
+                        'fileToUpload', file_get_contents($filePath), $filename, ['Content-Type' => 'application/pdf']
+                    )->post('https://catbox.moe/user/api.php', [
+                        'reqtype' => 'fileupload',
+                    ]);
+
+                    if ($catboxResponse->successful() && str_starts_with($catboxResponse->body(), 'https://')) {
+                        $deliveryUrl = trim($catboxResponse->body());
+                        Log::info("WhatsApp Service: PDF uploaded to catbox.moe: {$deliveryUrl}");
+                    } else {
+                        Log::error("WhatsApp Service: catbox.moe upload failed. Status: " . $catboxResponse->status() . " — using fallback URL.");
+                    }
+                }
+
                 $response = Http::withToken($this->token)
                     ->post($endpoint, [
                         'device' => $this->device,
                         'type' => 'file',
                         'params' => [
                             'document' => [
-                                'url' => $fileUrl,
+                                'url' => $deliveryUrl,
                             ],
                             'caption' => $caption,
                         ]
