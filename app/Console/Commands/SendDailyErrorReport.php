@@ -96,7 +96,7 @@ class SendDailyErrorReport extends Command
         $fullPath = $disk->path("reports/{$fileName}");
         $this->info("PDF saved to: {$fullPath}");
         // This ensures WhatsApp sees the correct filename
-        $fileUrl = route('reports.download', ['filename' => $fileName]);
+        $fileUrl = \Illuminate\Support\Facades\Storage::disk('public')->url("reports/{$fileName}");
         
         $this->info("PDF saved. Download URL: {$fileUrl}");
 
