@@ -2,7 +2,6 @@
 
 namespace App\Filament\Admin\Pages;
 
-use App\Jobs\SendDailyErrorReportJob;
 use Filament\Pages\Page;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
@@ -53,7 +52,7 @@ class Settings extends Page implements HasForms
                                 ->modalDescription('Generate and send a real-time snapshot of currently down customers? Only customers with > 5 minutes of active downtime will be included.')
                                 ->modalSubmitActionLabel('Yes, Send it')
                                 ->action(function () {
-                                    $this->queueReport();
+                                    $this->sendReport(app(\App\Services\WhatsApp\WhatsAppService::class));
                                 }),
                         ]),
                         
@@ -76,27 +75,6 @@ class Settings extends Page implements HasForms
 
         Notification::make()
             ->title('Settings saved successfully')
-            ->success()
-            ->send();
-    }
-
-    public function queueReport(): void
-    {
-        if (!Setting::getValue('daily_report_enabled', true)) {
-            Notification::make()
-                ->title('Report Disabled')
-                ->body('Please enable Daily Error Reports first.')
-                ->warning()
-                ->send();
-
-            return;
-        }
-
-        SendDailyErrorReportJob::dispatch();
-
-        Notification::make()
-            ->title('Report Queued')
-            ->body('The report is being generated and sent in the background.')
             ->success()
             ->send();
     }
@@ -126,15 +104,6 @@ class Settings extends Page implements HasForms
             // Fetch data
             $customers = \App\Models\Customer::criticallyDown()
                 ->with('area')
-                // CRITICAL FIX: Limit relationship to 1 to prevent loading 100k+ records per customer
-                ->with(['healthChecks' => function ($q) {
-                    $q->latest('checked_at')->limit(1);
-                }])
-                // Re-add the count for the PDF "Total Downtime" column
-                ->withCount(['healthChecks' => function ($q) {
-                    $q->whereDate('checked_at', \Carbon\Carbon::today())
-                      ->where('status', 'down');
-                }])
                 ->get();
 
             if ($customers->isEmpty()) {
