@@ -2,6 +2,7 @@
 
 namespace App\Filament\Admin\Pages;
 
+use App\Jobs\SendDailyErrorReportJob;
 use Filament\Pages\Page;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
@@ -52,7 +53,7 @@ class Settings extends Page implements HasForms
                                 ->modalDescription('Generate and send a real-time snapshot of currently down customers? Only customers with > 5 minutes of active downtime will be included.')
                                 ->modalSubmitActionLabel('Yes, Send it')
                                 ->action(function () {
-                                    $this->sendReport(app(\App\Services\WhatsApp\WhatsAppService::class));
+                                    $this->queueReport();
                                 }),
                         ]),
                         
@@ -75,6 +76,27 @@ class Settings extends Page implements HasForms
 
         Notification::make()
             ->title('Settings saved successfully')
+            ->success()
+            ->send();
+    }
+
+    public function queueReport(): void
+    {
+        if (!Setting::getValue('daily_report_enabled', true)) {
+            Notification::make()
+                ->title('Report Disabled')
+                ->body('Please enable Daily Error Reports first.')
+                ->warning()
+                ->send();
+
+            return;
+        }
+
+        SendDailyErrorReportJob::dispatch();
+
+        Notification::make()
+            ->title('Report Queued')
+            ->body('The report is being generated and sent in the background.')
             ->success()
             ->send();
     }
@@ -139,8 +161,7 @@ class Settings extends Page implements HasForms
                 throw new \Exception("Failed to write PDF to disk!");
             }
 
-            // URL for WhatsApp
-            $fileUrl = route('reports.download', ['filename' => $fileName]);
+            $fullPath = $disk->path("reports/{$fileName}");
             
             // Send via WhatsApp
             $groupId = config('services.whatsapp.audit_group_id');
@@ -148,14 +169,13 @@ class Settings extends Page implements HasForms
             if ($groupId) {
                 $sent = $whatsAppService->sendDocumentToGroup(
                     $groupId,
-                    $fileUrl,
                     "📊 *{$reportTitle}*\n" .
                     "📅 {$humanReadableDate}\n" .
                     "📉 *Issues Found:* {$customers->count()} Customers\n\n" .
                     "📎 _See attached PDF for details._\n\n" .
                     "🤖 *Sender:* NOC Skynet\n" .
                     "⚠️ _Disclaimer: This is an automatic message._",
-                    $fileName
+                    $fullPath
                 );
 
                 if ($sent) {

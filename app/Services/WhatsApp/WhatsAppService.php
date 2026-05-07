@@ -24,9 +24,25 @@ class WhatsAppService
      */
     public function sendMessageToGroup(string $groupId, string $message): bool
     {
+        $groupId = ltrim($groupId, '#');
+
         return $this->post("/groups/{$groupId}/send", [
             'type'   => 'chat',
             'params' => ['text' => $message],
+        ]);
+    }
+
+    /**
+     * Send a text message to a WhatsApp number.
+     */
+    public function sendMessageToNumber(string $receiver, string $message): bool
+    {
+        $receiver = ltrim($receiver, '+');
+
+        return $this->post('/messages', [
+            'receiver' => $receiver,
+            'type'     => 'chat',
+            'params'   => ['text' => $message],
         ]);
     }
 
@@ -36,6 +52,7 @@ class WhatsAppService
      */
     public function sendDocumentToGroup(string $groupId, string $caption, string $filePath): bool
     {
+        $groupId = ltrim($groupId, '#');
         $url = $this->uploadToCatbox($filePath);
 
         return $this->post("/groups/{$groupId}/send", [

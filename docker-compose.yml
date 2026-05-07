@@ -1,0 +1,110 @@
+name: skynet-customer-health
+
+services:
+  app:
+    build: .
+    env_file:
+      - .env
+    environment:
+      APP_ENV: local
+      APP_DEBUG: "true"
+      APP_URL: http://localhost:8000
+      ASSET_URL: http://localhost:8000
+      DB_CONNECTION: mysql
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_DATABASE: customer_health
+      DB_USERNAME: customer_health
+      DB_PASSWORD: customer_health
+      CACHE_STORE: database
+      QUEUE_CONNECTION: database
+      SESSION_DRIVER: database
+      FILESYSTEM_DISK: public
+      WHATSAPP_AUDIT_GROUP_ID: 22750
+    ports:
+      - "8000:8000"
+    volumes:
+      - storage:/var/www/html/storage
+      - bootstrap-cache:/var/www/html/bootstrap/cache
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  queue:
+    build: .
+    env_file:
+      - .env
+    environment:
+      APP_ENV: local
+      APP_DEBUG: "true"
+      APP_URL: http://localhost:8000
+      ASSET_URL: http://localhost:8000
+      DB_CONNECTION: mysql
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_DATABASE: customer_health
+      DB_USERNAME: customer_health
+      DB_PASSWORD: customer_health
+      CACHE_STORE: database
+      QUEUE_CONNECTION: database
+      SESSION_DRIVER: database
+      FILESYSTEM_DISK: public
+      WHATSAPP_AUDIT_GROUP_ID: 22750
+    command: sh -c "docker/wait-for-db.sh && php artisan queue:work --tries=3"
+    volumes:
+      - storage:/var/www/html/storage
+      - bootstrap-cache:/var/www/html/bootstrap/cache
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  scheduler:
+    build: .
+    env_file:
+      - .env
+    environment:
+      APP_ENV: local
+      APP_DEBUG: "true"
+      APP_URL: http://localhost:8000
+      ASSET_URL: http://localhost:8000
+      DB_CONNECTION: mysql
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_DATABASE: customer_health
+      DB_USERNAME: customer_health
+      DB_PASSWORD: customer_health
+      CACHE_STORE: database
+      QUEUE_CONNECTION: database
+      SESSION_DRIVER: database
+      FILESYSTEM_DISK: public
+      WHATSAPP_AUDIT_GROUP_ID: 22750
+    command: sh -c "docker/wait-for-db.sh && php artisan schedule:work"
+    volumes:
+      - storage:/var/www/html/storage
+      - bootstrap-cache:/var/www/html/bootstrap/cache
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  mysql:
+    image: mariadb:11.4
+    environment:
+      MARIADB_ROOT_PASSWORD: root
+      MARIADB_DATABASE: customer_health
+      MARIADB_USER: customer_health
+      MARIADB_PASSWORD: customer_health
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mariadb-admin ping -h 127.0.0.1 -uroot -p$${MARIADB_ROOT_PASSWORD} --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 60
+      start_period: 120s
+
+volumes:
+  mysql-data:
+  storage:
+  bootstrap-cache:

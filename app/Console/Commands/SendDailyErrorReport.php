@@ -17,7 +17,9 @@ class SendDailyErrorReport extends Command
      *
      * @var string
      */
-    protected $signature = 'app:send-daily-error-report {--whatsapp_group_id= : The WhatsApp Group ID to send to}';
+    protected $signature = 'app:send-daily-error-report
+        {--whatsapp_group_id= : The WhatsApp Group ID to send to}
+        {--test-fixture : Generate a report with local fixture data instead of querying the database}';
 
     /**
      * The console command description.
@@ -32,7 +34,7 @@ class SendDailyErrorReport extends Command
     public function handle(WhatsAppService $whatsAppService)
     {
         // Check if report sending is enabled
-        if (!\App\Models\Setting::getValue('daily_report_enabled', true)) {
+        if (!$this->option('test-fixture') && !\App\Models\Setting::getValue('daily_report_enabled', true)) {
             $this->warn('Daily Error Report is disabled in settings. Skipping.');
             return;
         }
@@ -60,9 +62,23 @@ class SendDailyErrorReport extends Command
 
         $this->info("Querying database...");
         // Fetch critically down customers — no subquery count, fast lookup using indexes
-        $customers = Customer::criticallyDown()
-            ->with('area')
-            ->get();
+        if ($this->option('test-fixture')) {
+            $customers = collect([
+                (new Customer([
+                    'name' => 'Local Test Customer',
+                    'ip_address' => '192.0.2.10',
+                    'status' => 'down',
+                    'is_isolated' => false,
+                ]))
+                    ->setRelation('area', new \App\Models\Area(['name' => 'Local Test Area']))
+                    ->setCreatedAt(now()->subHour())
+                    ->setUpdatedAt(now()->subMinutes(17)),
+            ]);
+        } else {
+            $customers = Customer::criticallyDown()
+                ->with('area')
+                ->get();
+        }
 
         $this->info("Found {$customers->count()} critical issues (Current Down > 5 mins).");
 

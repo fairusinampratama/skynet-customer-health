@@ -14,6 +14,8 @@ class SendDailyErrorReportJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
+    public int $timeout = 900;
+
     /**
      * Create a new job instance.
      */
@@ -77,14 +79,13 @@ class SendDailyErrorReportJob implements ShouldQueue
                 Log::info("Sending to WhatsApp Group ID: {$groupId}");
                 $sent = $whatsAppService->sendDocumentToGroup(
                     $groupId,
-                    $fileUrl,
                     "📊 *{$reportTitle}*\n" .
                     "📅 {$humanReadableDate}\n" .
                     "📉 *Issues Found:* {$customers->count()} Customers\n\n" .
                     "📎 _See attached PDF for details._\n\n" .
                     "🤖 *Sender:* NOC Skynet\n" .
                     "⚠️ _Disclaimer: This is an automatic message._",
-                    $fileName
+                    $fullPath
                 );
 
                 if ($sent) {
