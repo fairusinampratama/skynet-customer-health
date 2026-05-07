@@ -2,6 +2,7 @@
 
 namespace App\Filament\Admin\Pages;
 
+use App\Services\Reports\DailyErrorReportService;
 use Filament\Pages\Page;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
@@ -52,7 +53,7 @@ class Settings extends Page implements HasForms
                                 ->modalDescription('Generate and send a real-time snapshot of currently down customers? Only customers with > 5 minutes of active downtime will be included.')
                                 ->modalSubmitActionLabel('Yes, Send it')
                                 ->action(function () {
-                                    $this->sendReport(app(\App\Services\WhatsApp\WhatsAppService::class));
+                                    $this->sendReport(app(DailyErrorReportService::class));
                                 }),
                         ]),
                         
@@ -79,90 +80,19 @@ class Settings extends Page implements HasForms
             ->send();
     }
 
-    public function sendReport(\App\Services\WhatsApp\WhatsAppService $whatsAppService): void
+    public function sendReport(DailyErrorReportService $dailyErrorReportService): void
     {
         // Increase time limit to 5 minutes to prevent PHP timeout
         set_time_limit(300);
 
         try {
-            // Check if report sending is enabled
-            if (!Setting::getValue('daily_report_enabled', true)) {
-                 Notification::make()
-                    ->title('Report Disabled')
-                    ->body('Please enable Daily Error Reports first.')
-                    ->warning()
-                    ->send();
-                return;
-            }
+            $result = $dailyErrorReportService->send();
 
-            $date = \Carbon\Carbon::today();
-            $dayName = $date->format('l');
-            $formattedDate = $date->format('Y-m-d');
-            $humanReadableDate = $date->format('l, d F Y');
-            $reportTitle = "Error Report - " . now()->format('H-i');
-
-            // Fetch data
-            $customers = \App\Models\Customer::criticallyDown()
-                ->with('area')
-                ->get();
-
-            if ($customers->isEmpty()) {
-                Notification::make()
-                    ->title('No Issues Found')
-                    ->body('There are no customers with critical downtime (> 5 mins) right now.')
-                    ->info()
-                    ->send();
-                return; 
-            }
-
-            // Generate PDF
-            $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('reports.daily_errors', [
-                'reportTitle' => $reportTitle,
-                'date' => $humanReadableDate,
-                'affectedCustomers' => $customers,
-            ]);
-
-            $safeTitle = \Illuminate\Support\Str::snake($reportTitle);
-            $fileName = "{$safeTitle}_{$dayName}_{$formattedDate}_" . now()->format('H-i-s') . ".pdf";
-            
-            $disk = \Illuminate\Support\Facades\Storage::disk('public');
-            if (!$disk->put("reports/{$fileName}", $pdf->output())) {
-                throw new \Exception("Failed to write PDF to disk!");
-            }
-
-            $fullPath = $disk->path("reports/{$fileName}");
-            
-            // Send via WhatsApp
-            $groupId = config('services.whatsapp.audit_group_id');
-
-            if ($groupId) {
-                $sent = $whatsAppService->sendDocumentToGroup(
-                    $groupId,
-                    "📊 *{$reportTitle}*\n" .
-                    "📅 {$humanReadableDate}\n" .
-                    "📉 *Issues Found:* {$customers->count()} Customers\n\n" .
-                    "📎 _See attached PDF for details._\n\n" .
-                    "🤖 *Sender:* NOC Skynet\n" .
-                    "⚠️ _Disclaimer: This is an automatic message._",
-                    $fullPath
-                );
-
-                if ($sent) {
-                    Notification::make()
-                        ->title('Report Sent Successfully')
-                        ->body("Sent to Group ID: $groupId")
-                        ->success()
-                        ->send();
-                } else {
-                    throw new \Exception("Failed to send report via WhatsApp API.");
-                }
-            } else {
-                 Notification::make()
-                    ->title('Configuration Error')
-                    ->body("No WhatsApp Group ID found in configuration.")
-                    ->danger()
-                    ->send();
-            }
+            Notification::make()
+                ->title($result->wasSent() ? 'Report Sent Successfully' : 'Report Skipped')
+                ->body($result->wasSent() ? "Sent to Group ID: {$result->groupId}" : $result->message)
+                ->{$result->wasSent() ? 'success' : 'info'}()
+                ->send();
 
         } catch (\Throwable $e) {
             \Illuminate\Support\Facades\Log::error('Manual Report Failed', ['error' => $e->getMessage()]);

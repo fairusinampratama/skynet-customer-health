@@ -2,13 +2,8 @@
 
 namespace App\Console\Commands;
 
-use App\Models\Customer;
-use App\Models\HealthCheck;
-use App\Services\WhatsApp\WhatsAppService;
-use Barryvdh\DomPDF\Facade\Pdf;
-use Carbon\Carbon;
+use App\Services\Reports\DailyErrorReportService;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\Log;
 
 class SendDailyErrorReport extends Command
 {
@@ -31,109 +26,27 @@ class SendDailyErrorReport extends Command
     /**
      * Execute the console command.
      */
-    public function handle(WhatsAppService $whatsAppService)
+    public function handle(DailyErrorReportService $dailyErrorReportService): int
     {
-        // Check if report sending is enabled
-        if (!$this->option('test-fixture') && !\App\Models\Setting::getValue('daily_report_enabled', true)) {
-            $this->warn('Daily Error Report is disabled in settings. Skipping.');
-            return;
+        try {
+            $result = $dailyErrorReportService->send(
+                groupId: $this->option('whatsapp_group_id'),
+                useFixture: (bool) $this->option('test-fixture'),
+            );
+        } catch (\Throwable $e) {
+            $this->error($e->getMessage());
+
+            return self::FAILURE;
         }
 
-        $date = Carbon::today();
-        $dayName = $date->format('l');
-        $formattedDate = $date->format('Y-m-d');
-        $humanReadableDate = $date->format('l, d F Y');
-        
-        $hour = (int) now()->format('H');
-        
-        if ($hour < 10) {
-            $reportTitle = "Morning Error Report ({$hour}:00)";
-        } elseif ($hour < 15) {
-            $reportTitle = "Afternoon Error Report ({$hour}:00)";
-        } elseif ($hour < 19) {
-            $reportTitle = "Evening Error Report ({$hour}:00)";
-        } else {
-            $reportTitle = "Night Error Report ({$hour}:00)";
-        }
-        // Or simply:
-        $reportTitle = "Error Report - " . now()->format('H-i');
+        $this->{$result->wasSkipped() ? 'warn' : 'info'}($result->message);
 
-        $this->info("Generating {$reportTitle} for {$humanReadableDate}...");
-
-        $this->info("Querying database...");
-        // Fetch critically down customers — no subquery count, fast lookup using indexes
-        if ($this->option('test-fixture')) {
-            $customers = collect([
-                (new Customer([
-                    'name' => 'Local Test Customer',
-                    'ip_address' => '192.0.2.10',
-                    'status' => 'down',
-                    'is_isolated' => false,
-                ]))
-                    ->setRelation('area', new \App\Models\Area(['name' => 'Local Test Area']))
-                    ->setCreatedAt(now()->subHour())
-                    ->setUpdatedAt(now()->subMinutes(17)),
-            ]);
-        } else {
-            $customers = Customer::criticallyDown()
-                ->with('area')
-                ->get();
+        if ($result->filePath) {
+            $this->info("PDF saved to: {$result->filePath}");
         }
 
-        $this->info("Found {$customers->count()} critical issues (Current Down > 5 mins).");
-
-        if ($customers->isEmpty()) {
-            $this->info("No customers with significant downtime (> 5 mins). Skipping report.");
-            // Optional: uncomment return to skip sending empty reports
-            // return; 
-        }
-
-        $this->info("Starting PDF generation...");
-        // 3. Generate PDF
-        $pdf = Pdf::loadView('reports.daily_errors', [
-            'reportTitle' => $reportTitle,
-            'date' => $humanReadableDate,
-            'affectedCustomers' => $customers,
-        ]);
-        
-        $contents = $pdf->output();
-        $this->info("PDF generation completed. Size: " . strlen($contents) . " bytes.");
-
-        $safeTitle = \Illuminate\Support\Str::snake($reportTitle);
-        $fileName = "{$safeTitle}_{$dayName}_{$formattedDate}_" . now()->format('H-i-s') . ".pdf";
-        // Whatspie requires a PUBLIC URL. So we must save to the 'public' disk.
-        // Ensure you have run 'php artisan storage:link'
-        $disk = \Illuminate\Support\Facades\Storage::disk('public');
-        if (!$disk->put("reports/{$fileName}", $contents)) {
-            $this->error("Failed to write PDF to disk!");
-            return;
-        }
-
-        $fullPath = $disk->path("reports/{$fileName}");
-        $this->info("PDF saved to: {$fullPath}");
-
-        // 3. Send via WhatsApp
-        $groupId = $this->option('whatsapp_group_id') ?? config('services.whatsapp.audit_group_id');
-
-        if ($groupId) {
-            $this->info("Sending to WhatsApp Group ID: {$groupId}...");
-
-            $caption = "📊 *{$reportTitle}*\n" .
-                "📅 {$humanReadableDate}\n" .
-                "📉 *Issues Found:* {$customers->count()} Customers\n\n" .
-                "📎 _See attached PDF for details._\n\n" .
-                "🤖 *Sender:* NOC Skynet\n" .
-                "⚠️ _Disclaimer: This is an automatic message._";
-
-            $sent = $whatsAppService->sendDocumentToGroup($groupId, $caption, $fullPath);
-
-            if ($sent) {
-                $this->info("Report sent successfully.");
-            } else {
-                $this->error("Failed to send report via WhatsApp.");
-            }
-        } else {
-            $this->warn("No WhatsApp Group ID provided or configured. Skipping send.");
-        }
+        return $result->wasSent() || $result->wasSkipped()
+            ? self::SUCCESS
+            : self::FAILURE;
     }
 }
