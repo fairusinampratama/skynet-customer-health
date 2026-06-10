@@ -1,5 +1,5 @@
 # Nixpacks Configuration for Skynet Customer Health
-# This ensures consistency across Coolify deployments
+# Updated: Node 22 for Vite 7+, supervisor via pip --break-system-packages
 
 [phases.setup]
 nixPkgs = [
@@ -18,16 +18,21 @@ nixPkgs = [
     "php84Extensions.tokenizer",
     "php84Extensions.pcntl",
     "php84Extensions.posix",
-    "nodejs_20",
-    "npm-9_x",
-    "python311Packages.supervisor",
+    "php84Extensions.intl",
+    "php84Extensions.zip",
+    "php84Extensions.gd",
+    "php84Extensions.redis",
+    "nodejs_22",
+    "python311",
+    "python311Packages.pip",
     "iputils"
 ]
 
 [phases.install]
 cmds = [
     "composer install --no-dev --optimize-autoloader --no-interaction",
-    "npm install"
+    "npm install",
+    "pip install --break-system-packages supervisor"
 ]
 
 [phases.build]
@@ -37,5 +42,3 @@ cmds = [
 
 [start]
 cmd = "sh deploy.sh && supervisord -c supervisord.conf"
-# Note: Path to supervisord might vary in Nix, usually just 'supervisord' works if in PATH.
-# We'll use just 'supervisord' and ensure it's in the nixPkgs.
