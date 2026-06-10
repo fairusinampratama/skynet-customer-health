@@ -5,12 +5,11 @@ namespace App\Filament\Admin\Widgets;
 use Filament\Widgets\ChartWidget;
 use Filament\Support\RawJs;
 use Illuminate\Support\Facades\DB;
-use Carbon\Carbon;
 
 class SlaDowntimeChart extends ChartWidget
 {
-    protected ?string $heading = 'Avg Waktu Recovery per Daerah (7 Hari)';
-    protected ?string $description = 'v4';
+    protected ?string $heading = 'Avg Down Intensity per Daerah (7 Hari)';
+    protected ?string $description = 'Rata-rata down count/hari per area';
     protected static ?int $sort = 4;
     protected int | string | array $columnSpan = 'full';
     protected ?string $pollingInterval = '60s';
@@ -19,69 +18,35 @@ class SlaDowntimeChart extends ChartWidget
 
     protected function getData(): array
     {
-        $since = now()->subDays(7);
+        // Use pre-aggregated daily_stats (713 rows) — INSTANT query
+        // Shows avg daily down_count per area over last 7 days
+        $data = DB::table('health_check_daily_stats')
+            ->join('areas', 'health_check_daily_stats.area_id', '=', 'areas.id')
+            ->where('health_check_daily_stats.date', '>=', now()->subDays(7)->toDateString())
+            ->where('health_check_daily_stats.down_count', '>', 0)
+            ->groupBy('areas.id', 'areas.name')
+            ->select('areas.name as name', DB::raw('ROUND(AVG(down_count)) as avg_down'))
+            ->orderByDesc('avg_down')
+            ->limit(10)
+            ->get();
 
-        // Step 1: Get all down events with their next status (using window functions)
-        // This query works on MySQL 8+ and PostgreSQL (both support window functions)
-        $downEvents = DB::select("
-            SELECT 
-                a.id AS area_id,
-                a.name AS area_name,
-                hc.customer_id,
-                hc.checked_at AS down_at,
-                LEAD(hc.status) OVER (PARTITION BY hc.customer_id ORDER BY hc.checked_at) AS next_status,
-                LEAD(hc.checked_at) OVER (PARTITION BY hc.customer_id ORDER BY hc.checked_at) AS next_checked_at
-            FROM health_checks hc
-            JOIN customers c ON hc.customer_id = c.id
-            JOIN areas a ON c.area_id = a.id
-            WHERE hc.checked_at >= ?
-              AND c.is_isolated = 0
-              AND c.area_id IS NOT NULL
-              AND hc.status = 'down'
-        ", [$since->toDateTimeString()]);
-
-        if (empty($downEvents)) {
-            return $this->emptyDataset('Belum ada data recovery (7 hari terakhir)');
-        }
-
-        // Step 2: Calculate recovery time per area (date math in PHP for DB compatibility)
-        $areaTotals = [];
-
-        foreach ($downEvents as $event) {
-            $downAt = Carbon::parse($event->down_at);
-
-            if (in_array($event->next_status, ['up', 'unstable']) && $event->next_checked_at) {
-                $nextAt = Carbon::parse($event->next_checked_at);
-                $minutes = max($downAt->diffInMinutes($nextAt), 1);
-            } else {
-                // Still down or no recovery found
-                $minutes = max($downAt->diffInMinutes(now()), 1);
-            }
-
-            $areaId = $event->area_id;
-            if (!isset($areaTotals[$areaId])) {
-                $areaTotals[$areaId] = ['name' => $event->area_name, 'sum' => 0, 'count' => 0];
-            }
-            $areaTotals[$areaId]['sum'] += $minutes;
-            $areaTotals[$areaId]['count']++;
-        }
-
-        $areaRecovery = [];
-        foreach ($areaTotals as $data) {
-            $areaRecovery[] = [
-                'name' => $data['name'],
-                'avg' => round($data['sum'] / $data['count']),
+        if ($data->isEmpty()) {
+            return [
+                'datasets' => [
+                    [
+                        'label' => 'Avg Down/Hari',
+                        'data' => [0],
+                        'backgroundColor' => ['rgba(100,100,100,0.3)'],
+                        'borderColor' => ['rgba(100,100,100,0.5)'],
+                        'borderWidth' => 1,
+                        'borderRadius' => 6,
+                    ],
+                ],
+                'labels' => ['Belum ada data (7 hari terakhir)'],
             ];
         }
 
-        if (empty($areaRecovery)) {
-            return $this->emptyDataset('Belum ada data recovery (7 hari terakhir)');
-        }
-
-        // Sort worst first
-        usort($areaRecovery, fn($a, $b) => $b['avg'] <=> $a['avg']);
-
-        $count = count($areaRecovery);
+        $count = $data->count();
         $colors = [];
         $borders = [];
         for ($i = 0; $i < $count; $i++) {
@@ -96,32 +61,15 @@ class SlaDowntimeChart extends ChartWidget
         return [
             'datasets' => [
                 [
-                    'label' => 'Rata-rata Recovery (menit)',
-                    'data' => array_column($areaRecovery, 'avg'),
+                    'label' => 'Avg Down/Hari',
+                    'data' => $data->pluck('avg_down')->toArray(),
                     'backgroundColor' => $colors,
                     'borderColor' => $borders,
                     'borderWidth' => 1,
                     'borderRadius' => 6,
                 ],
             ],
-            'labels' => array_column($areaRecovery, 'name'),
-        ];
-    }
-
-    private function emptyDataset(string $msg): array
-    {
-        return [
-            'datasets' => [
-                [
-                    'label' => 'Rata-rata Recovery (menit)',
-                    'data' => [0],
-                    'backgroundColor' => ['rgba(100,100,100,0.3)'],
-                    'borderColor' => ['rgba(100,100,100,0.5)'],
-                    'borderWidth' => 1,
-                    'borderRadius' => 6,
-                ],
-            ],
-            'labels' => [$msg],
+            'labels' => $data->pluck('name')->toArray(),
         ];
     }
 
@@ -139,10 +87,7 @@ class SlaDowntimeChart extends ChartWidget
                 tooltip: {
                     callbacks: {
                         label: function(context) {
-                            var value = context.parsed.y;
-                            var h = Math.floor(value / 60);
-                            var m = value % 60;
-                            return "Avg Recovery: " + (h > 0 ? h + "j " : "") + m + "m";
+                            return "Avg Down/Hari: " + context.parsed.y.toLocaleString();
                         }
                     }
                 }
@@ -154,9 +99,12 @@ class SlaDowntimeChart extends ChartWidget
                 },
                 y: {
                     beginAtZero: true,
-                    title: { display: true, text: 'Rata-rata Waktu Recovery (menit)' },
+                    title: { display: true, text: 'Rata-rata Down Count per Hari' },
                     grid: { color: 'rgba(255,255,255,0.05)' },
-                    ticks: { precision: 0 }
+                    ticks: {
+                        precision: 0,
+                        callback: function(value) { return value.toLocaleString(); }
+                    }
                 }
             }
         }

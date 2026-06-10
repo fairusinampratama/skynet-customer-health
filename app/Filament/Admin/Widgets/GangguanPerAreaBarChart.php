@@ -18,17 +18,13 @@ class GangguanPerAreaBarChart extends ChartWidget
 
     protected function getData(): array
     {
-        $since = now()->subDays(7);
-
-        $data = DB::table('health_checks')
-            ->join('customers', 'health_checks.customer_id', '=', 'customers.id')
-            ->join('areas', 'customers.area_id', '=', 'areas.id')
-            ->where('health_checks.status', 'down')
-            ->where('health_checks.checked_at', '>=', $since)
-            ->where('customers.is_isolated', false)
-            ->whereNotNull('customers.area_id')
+        // Use pre-aggregated daily_stats table (713 rows) instead of
+        // raw health_checks (49M rows) — instant query
+        $data = DB::table('health_check_daily_stats')
+            ->join('areas', 'health_check_daily_stats.area_id', '=', 'areas.id')
+            ->where('health_check_daily_stats.date', '>=', now()->subDays(7)->toDateString())
             ->groupBy('areas.id', 'areas.name')
-            ->select('areas.name as name', DB::raw('COUNT(*) as total_gangguan'))
+            ->select('areas.name as name', DB::raw('SUM(down_count) as total_gangguan'))
             ->orderByDesc('total_gangguan')
             ->limit(5)
             ->get();
@@ -90,7 +86,7 @@ class GangguanPerAreaBarChart extends ChartWidget
                 tooltip: {
                     callbacks: {
                         label: function(context) {
-                            return "Total Gangguan: " + context.parsed.y;
+                            return "Total Gangguan: " + context.parsed.y.toLocaleString();
                         }
                     }
                 }
@@ -103,7 +99,10 @@ class GangguanPerAreaBarChart extends ChartWidget
                     beginAtZero: true,
                     title: { display: true, text: 'Total Gangguan' },
                     grid: { color: 'rgba(255,255,255,0.05)' },
-                    ticks: { precision: 0 }
+                    ticks: {
+                        precision: 0,
+                        callback: function(value) { return value.toLocaleString(); }
+                    }
                 }
             }
         }

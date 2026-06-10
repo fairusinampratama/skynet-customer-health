@@ -4,11 +4,8 @@ namespace App\Filament\Admin\Widgets;
 
 use Filament\Widgets\StatsOverviewWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
-use App\Models\Area;
-use App\Models\HealthCheck;
 use App\Models\Customer;
 use Illuminate\Support\Facades\DB;
-use Carbon\Carbon;
 
 class SlaStatsOverview extends StatsOverviewWidget
 {
@@ -18,30 +15,38 @@ class SlaStatsOverview extends StatsOverviewWidget
 
     protected function getStats(): array
     {
-        $since = now()->subDays(7); // Match Prunable retention
+        $since = now()->subDays(7)->toDateString();
 
-        $totalChecks = HealthCheck::where('checked_at', '>=', $since)->count();
-        $downChecks = HealthCheck::where('checked_at', '>=', $since)
-            ->where('status', 'down')->count();
-        $overallSla = $totalChecks > 0 ? round((1 - ($downChecks / $totalChecks)) * 100, 2) : 100;
+        // Use pre-aggregated daily_stats (713 rows) instead of raw health_checks (49M rows)
+        $stats = DB::table('health_check_daily_stats')
+            ->where('date', '>=', $since)
+            ->selectRaw('SUM(down_count) as total_down, SUM(total_count) as total_checks')
+            ->first();
 
-        $worstArea = Area::query()
-            ->select('areas.name')
-            ->selectRaw("COUNT(CASE WHEN health_checks.status = 'down' THEN 1 END) as down_count")
-            ->join('customers', 'customers.area_id', '=', 'areas.id')
-            ->join('health_checks', 'health_checks.customer_id', '=', 'customers.id')
-            ->where('health_checks.checked_at', '>=', $since)
-            ->where('customers.is_isolated', false)
+        $totalDown = $stats->total_down ?? 0;
+        $totalChecks = $stats->total_checks ?? 0;
+        $overallSla = $totalChecks > 0 ? round((1 - ($totalDown / $totalChecks)) * 100, 2) : 100;
+
+        // Worst area from daily_stats
+        $worstArea = DB::table('health_check_daily_stats')
+            ->join('areas', 'health_check_daily_stats.area_id', '=', 'areas.id')
+            ->where('health_check_daily_stats.date', '>=', $since)
             ->groupBy('areas.id', 'areas.name')
+            ->select('areas.name', DB::raw('SUM(down_count) as down_count'))
             ->orderByDesc('down_count')
             ->first();
 
         $totalDownCustomers = Customer::where('status', 'down')
             ->where('is_isolated', false)
-            ->where('updated_at', '>=', $since)
             ->count();
 
-        $avgRecovery = $this->getAvgRecoveryTime($since);
+        // Avg down time per area from daily_stats (approximation)
+        $avgDownPerArea = DB::table('health_check_daily_stats')
+            ->join('areas', 'health_check_daily_stats.area_id', '=', 'areas.id')
+            ->where('health_check_daily_stats.date', '>=', $since)
+            ->where('down_count', '>', 0)
+            ->selectRaw('AVG(down_count) as avg_down')
+            ->first();
 
         return [
             Stat::make('SLA (7 Hari)', "{$overallSla}%")
@@ -50,12 +55,12 @@ class SlaStatsOverview extends StatsOverviewWidget
                 ->color($overallSla >= 99.5 ? 'success' : ($overallSla >= 98 ? 'warning' : 'danger')),
 
             Stat::make('Daerah Terburuk', $worstArea?->name ?? '-')
-                ->description($worstArea ? "{$worstArea->down_count} gangguan" : 'Tidak ada data')
+                ->description($worstArea ? number_format($worstArea->down_count) . ' gangguan' : 'Tidak ada data')
                 ->descriptionIcon('heroicon-m-map-pin')
                 ->color($worstArea && $worstArea->down_count > 100 ? 'danger' : 'warning'),
 
-            Stat::make('Rata-rata Recovery', $avgRecovery)
-                ->description('Waktu downtime ke uptime')
+            Stat::make('Rata-rata Down/Area', $avgDownPerArea ? number_format(round($avgDownPerArea->avg_down)) : '0')
+                ->description('Avg down count per area (7 hari)')
                 ->descriptionIcon('heroicon-m-clock')
                 ->color('info'),
 
@@ -64,51 +69,5 @@ class SlaStatsOverview extends StatsOverviewWidget
                 ->descriptionIcon('heroicon-m-arrow-trending-down')
                 ->color($totalDownCustomers > 0 ? 'danger' : 'success'),
         ];
-    }
-
-    private function getAvgRecoveryTime($since): string
-    {
-        try {
-            // Use window functions for efficient down→up transition detection
-            $downEvents = DB::select("
-                SELECT 
-                    hc.customer_id,
-                    hc.checked_at AS down_at,
-                    LEAD(hc.status) OVER (PARTITION BY hc.customer_id ORDER BY hc.checked_at) AS next_status,
-                    LEAD(hc.checked_at) OVER (PARTITION BY hc.customer_id ORDER BY hc.checked_at) AS next_checked_at
-                FROM health_checks hc
-                JOIN customers c ON hc.customer_id = c.id
-                WHERE hc.checked_at >= ?
-                  AND c.is_isolated = 0
-                  AND hc.status = 'down'
-            ", [$since->toDateTimeString()]);
-
-            if (empty($downEvents)) return '0m';
-
-            $totalMinutes = 0;
-            $count = 0;
-
-            foreach ($downEvents as $event) {
-                $downAt = Carbon::parse($event->down_at);
-
-                if (in_array($event->next_status, ['up', 'unstable']) && $event->next_checked_at) {
-                    $nextAt = Carbon::parse($event->next_checked_at);
-                    $totalMinutes += max($downAt->diffInMinutes($nextAt), 1);
-                } else {
-                    $totalMinutes += max($downAt->diffInMinutes(now()), 1);
-                }
-                $count++;
-            }
-
-            if ($count === 0) return '0m';
-
-            $avg = round($totalMinutes / $count);
-        } catch (\Exception $e) {
-            return '0m';
-        }
-
-        $h = floor($avg / 60);
-        $m = $avg % 60;
-        return ($h > 0 ? "{$h}j " : '') . "{$m}m";
     }
 }
