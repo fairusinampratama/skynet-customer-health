@@ -3,15 +3,13 @@
 namespace App\Filament\Admin\Widgets;
 
 use Filament\Widgets\ChartWidget;
-use App\Models\Area;
-use App\Models\HealthCheck;
-use App\Models\Customer;
+use Filament\Support\RawJs;
 use Illuminate\Support\Facades\DB;
 
 class GangguanPerAreaBarChart extends ChartWidget
 {
     protected ?string $heading = 'Top 5 Daerah — Gangguan Terbanyak (7 Hari)';
-    protected ?string $description = 'v3';
+    protected ?string $description = 'v4';
     protected static ?int $sort = 3;
     protected int | string | array $columnSpan = 'full';
     protected ?string $pollingInterval = '60s';
@@ -19,10 +17,8 @@ class GangguanPerAreaBarChart extends ChartWidget
 
     protected function getData(): array
     {
-        // Use 7 days since HealthCheck prunes records older than 7 days
         $since = now()->subDays(7);
 
-        // Direct query — no Eloquent overhead, clear joins
         $data = DB::table('health_checks')
             ->join('customers', 'health_checks.customer_id', '=', 'customers.id')
             ->join('areas', 'customers.area_id', '=', 'areas.id')
@@ -84,39 +80,32 @@ class GangguanPerAreaBarChart extends ChartWidget
         return 'bar';
     }
 
-    protected function getOptions(): array
+    protected function getOptions(): RawJs
     {
-        return [
-            'plugins' => [
-                'legend' => [
-                    'display' => false,
-                ],
-                'tooltip' => [
-                    'callbacks' => [
-                        'label' => 'function(context) { return "Total Gangguan: " + context.parsed.y; }',
-                    ],
-                ],
-            ],
-            'scales' => [
-                'x' => [
-                    'grid' => [
-                        'display' => false,
-                    ],
-                ],
-                'y' => [
-                    'beginAtZero' => true,
-                    'title' => [
-                        'display' => true,
-                        'text' => 'Total Gangguan',
-                    ],
-                    'grid' => [
-                        'color' => 'rgba(255,255,255,0.05)',
-                    ],
-                    'ticks' => [
-                        'precision' => 0,
-                    ],
-                ],
-            ],
-        ];
+        return RawJs::make(<<<'JS'
+        {
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return "Total Gangguan: " + context.parsed.y;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    grid: { display: false }
+                },
+                y: {
+                    beginAtZero: true,
+                    title: { display: true, text: 'Total Gangguan' },
+                    grid: { color: 'rgba(255,255,255,0.05)' },
+                    ticks: { precision: 0 }
+                }
+            }
+        }
+        JS);
     }
 }
