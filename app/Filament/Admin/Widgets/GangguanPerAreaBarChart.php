@@ -31,7 +31,7 @@ class GangguanPerAreaBarChart extends ChartWidget
             ->where('customers.is_isolated', false)
             ->groupBy('areas.id', 'areas.name')
             ->orderByDesc('down_count')
-            ->limit(15)
+            ->limit(5)
             ->get();
 
         if ($data->isEmpty()) {
