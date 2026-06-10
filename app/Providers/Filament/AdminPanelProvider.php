@@ -41,8 +41,9 @@ class AdminPanelProvider extends PanelProvider
             ->discoverWidgets(in: app_path('Filament/Admin/Widgets'), for: 'App\Filament\Admin\Widgets')
             ->widgets([
                 \App\Filament\Admin\Resources\Servers\Widgets\ServerMonitoringBoard::class,
-                // Widgets\AccountWidget::class,
-                // Widgets\FilamentInfoWidget::class,
+                \App\Filament\Admin\Widgets\GangguanPerAreaBarChart::class,
+                \App\Filament\Admin\Widgets\SlaDowntimeChart::class,
+                \App\Filament\Admin\Widgets\SlaStatsOverview::class,
             ])
             ->sidebarCollapsibleOnDesktop()
             ->middleware([
