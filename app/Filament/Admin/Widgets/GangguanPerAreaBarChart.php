@@ -9,7 +9,7 @@ use App\Models\Customer;
 
 class GangguanPerAreaBarChart extends ChartWidget
 {
-    protected ?string $heading = 'Top 5 Daerah Gangguan Terbanyak (1 Bulan)';
+    protected ?string $heading = 'Top 5 Daerah — Gangguan Terbanyak (1 Bulan)';
     protected static ?int $sort = 3;
     protected int | string | array $columnSpan = 'full';
     protected ?string $pollingInterval = '60s';
