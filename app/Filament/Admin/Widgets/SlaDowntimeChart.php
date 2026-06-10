@@ -13,7 +13,7 @@ class SlaDowntimeChart extends ChartWidget
     protected static ?int $sort = 4;
     protected int | string | array $columnSpan = 'full';
     protected ?string $pollingInterval = '60s';
-    protected static ?string $maxHeight = '350px';
+    protected ?string $maxHeight = '350px';
 
     protected function getData(): array
     {

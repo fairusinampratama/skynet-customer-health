@@ -12,7 +12,7 @@ class ServerMonitoringBoard extends Widget
     
     protected int | string | array $columnSpan = 'full';
     
-    protected static ?string $pollingInterval = '30s';
+    protected ?string $pollingInterval = '30s';
     
     protected string $view = 'filament.admin.widgets.server-monitoring-board';
     
