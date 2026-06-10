@@ -10,6 +10,7 @@ use App\Models\Customer;
 class SlaDowntimeChart extends ChartWidget
 {
     protected ?string $heading = 'Avg Waktu Recovery per Daerah (1 Bulan)';
+    protected ?string $description = 'v2 — Reload halaman jika chart kosong';
     protected static ?int $sort = 4;
     protected int | string | array $columnSpan = 'full';
     protected ?string $pollingInterval = '60s';
