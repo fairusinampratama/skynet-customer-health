@@ -9,7 +9,7 @@ use App\Models\Customer;
 
 class SlaDowntimeChart extends ChartWidget
 {
-    protected static ?string $heading = 'Rata-rata Waktu Recovery per Daerah (1 Bulan)';
+    protected ?string $heading = 'Rata-rata Waktu Recovery per Daerah (1 Bulan)';
     protected static ?int $sort = 4;
     protected int | string | array $columnSpan = 'full';
     protected ?string $pollingInterval = '60s';
