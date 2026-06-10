@@ -6,11 +6,12 @@ use Filament\Widgets\ChartWidget;
 use App\Models\Area;
 use App\Models\HealthCheck;
 use App\Models\Customer;
+use Illuminate\Support\Facades\DB;
 
 class GangguanPerAreaBarChart extends ChartWidget
 {
-    protected ?string $heading = 'Top 5 Daerah — Gangguan Terbanyak (1 Bulan)';
-    protected ?string $description = 'v2 — Reload halaman jika chart kosong';
+    protected ?string $heading = 'Top 5 Daerah — Gangguan Terbanyak (7 Hari)';
+    protected ?string $description = 'v3';
     protected static ?int $sort = 3;
     protected int | string | array $columnSpan = 'full';
     protected ?string $pollingInterval = '60s';
@@ -18,16 +19,19 @@ class GangguanPerAreaBarChart extends ChartWidget
 
     protected function getData(): array
     {
-        $oneMonthAgo = now()->subMonth();
+        // Use 7 days since HealthCheck prunes records older than 7 days
+        $since = now()->subDays(7);
 
-        $data = Area::query()
-            ->select('areas.name')
-            ->selectRaw('COUNT(CASE WHEN health_checks.status = \'down\' THEN 1 END) as total_gangguan')
-            ->join('customers', 'customers.area_id', '=', 'areas.id')
-            ->join('health_checks', 'health_checks.customer_id', '=', 'customers.id')
-            ->where('health_checks.checked_at', '>=', $oneMonthAgo)
+        // Direct query — no Eloquent overhead, clear joins
+        $data = DB::table('health_checks')
+            ->join('customers', 'health_checks.customer_id', '=', 'customers.id')
+            ->join('areas', 'customers.area_id', '=', 'areas.id')
+            ->where('health_checks.status', 'down')
+            ->where('health_checks.checked_at', '>=', $since)
             ->where('customers.is_isolated', false)
+            ->whereNotNull('customers.area_id')
             ->groupBy('areas.id', 'areas.name')
+            ->select('areas.name as name', DB::raw('COUNT(*) as total_gangguan'))
             ->orderByDesc('total_gangguan')
             ->limit(5)
             ->get();
@@ -44,7 +48,7 @@ class GangguanPerAreaBarChart extends ChartWidget
                         'borderRadius' => 6,
                     ],
                 ],
-                'labels' => ['Belum ada data gangguan'],
+                'labels' => ['Belum ada data gangguan (7 hari terakhir)'],
             ];
         }
 

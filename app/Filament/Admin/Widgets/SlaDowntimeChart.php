@@ -6,11 +6,12 @@ use Filament\Widgets\ChartWidget;
 use App\Models\Area;
 use App\Models\HealthCheck;
 use App\Models\Customer;
+use Illuminate\Support\Facades\DB;
 
 class SlaDowntimeChart extends ChartWidget
 {
-    protected ?string $heading = 'Avg Waktu Recovery per Daerah (1 Bulan)';
-    protected ?string $description = 'v2 — Reload halaman jika chart kosong';
+    protected ?string $heading = 'Avg Waktu Recovery per Daerah (7 Hari)';
+    protected ?string $description = 'v3';
     protected static ?int $sort = 4;
     protected int | string | array $columnSpan = 'full';
     protected ?string $pollingInterval = '60s';
@@ -18,87 +19,69 @@ class SlaDowntimeChart extends ChartWidget
 
     protected function getData(): array
     {
-        $oneMonthAgo = now()->subMonth();
+        // Use 7 days since HealthCheck prunes records older than 7 days
+        $since = now()->subDays(7);
 
-        $areas = Area::with(['customers' => function ($q) {
-            $q->where('is_isolated', false);
-        }])->get();
+        // Get all non-isolated customers with their areas
+        $customers = Customer::where('is_isolated', false)
+            ->whereNotNull('area_id')
+            ->with('area')
+            ->get();
 
-        $labels = [];
-        $avgRecoveryMinutes = [];
+        if ($customers->isEmpty()) {
+            return $this->emptyDataset('Belum ada customer non-isolated');
+        }
 
-        foreach ($areas as $area) {
-            $customerIds = $area->customers->pluck('id');
+        $areaRecovery = [];
 
-            if ($customerIds->isEmpty()) {
-                continue;
-            }
-
-            $checks = HealthCheck::whereIn('customer_id', $customerIds)
-                ->where('checked_at', '>=', $oneMonthAgo)
-                ->orderBy('customer_id')
-                ->orderBy('checked_at')
-                ->get();
-
-            if ($checks->isEmpty()) {
-                continue;
-            }
-
-            $byCustomer = $checks->groupBy('customer_id');
+        foreach ($customers->groupBy('area_id') as $areaId => $areaCustomers) {
+            $areaName = $areaCustomers->first()->area?->name ?? 'Unknown';
             $recoveryTimes = [];
 
-            foreach ($byCustomer as $customerId => $customerChecks) {
-                $downStart = null;
+            foreach ($areaCustomers as $customer) {
+                $checks = HealthCheck::where('customer_id', $customer->id)
+                    ->where('checked_at', '>=', $since)
+                    ->orderBy('checked_at')
+                    ->get();
 
-                foreach ($customerChecks as $check) {
+                if ($checks->count() < 2) {
+                    continue;
+                }
+
+                $downStart = null;
+                foreach ($checks as $check) {
                     if ($check->status === 'down' && $downStart === null) {
                         $downStart = $check->checked_at;
-                    } elseif (($check->status === 'up' || $check->status === 'unstable') && $downStart !== null) {
+                    } elseif (in_array($check->status, ['up', 'unstable']) && $downStart !== null) {
                         $duration = $downStart->diffInMinutes($check->checked_at);
                         $recoveryTimes[] = max($duration, 1);
                         $downStart = null;
                     }
                 }
 
+                // Still down — count until now
                 if ($downStart !== null) {
                     $duration = $downStart->diffInMinutes(now());
                     $recoveryTimes[] = max($duration, 1);
                 }
             }
 
-            if (empty($recoveryTimes)) {
-                continue;
+            if (!empty($recoveryTimes)) {
+                $areaRecovery[] = [
+                    'name' => $areaName,
+                    'avg' => round(array_sum($recoveryTimes) / count($recoveryTimes)),
+                ];
             }
-
-            $avg = round(array_sum($recoveryTimes) / count($recoveryTimes));
-            $labels[] = $area->name;
-            $avgRecoveryMinutes[] = $avg;
         }
 
-        if (empty($labels)) {
-            return [
-                'datasets' => [
-                    [
-                        'label' => 'Rata-rata Recovery (menit)',
-                        'data' => [0],
-                        'backgroundColor' => ['rgba(100,100,100,0.3)'],
-                        'borderColor' => ['rgba(100,100,100,0.5)'],
-                        'borderWidth' => 1,
-                        'borderRadius' => 6,
-                    ],
-                ],
-                'labels' => ['Belum ada data recovery'],
-            ];
+        if (empty($areaRecovery)) {
+            return $this->emptyDataset('Belum ada data recovery (7 hari terakhir)');
         }
 
-        // Sort by avg recovery (worst first)
-        $combined = collect($labels)->map(fn ($label, $i) => [
-            'label' => $label,
-            'avg' => $avgRecoveryMinutes[$i],
-        ])->sortByDesc('avg')->values();
+        // Sort worst first
+        usort($areaRecovery, fn($a, $b) => $b['avg'] <=> $a['avg']);
 
-        // Color gradient: red for worst, blue for best
-        $count = $combined->count();
+        $count = count($areaRecovery);
         $colors = [];
         $borders = [];
         for ($i = 0; $i < $count; $i++) {
@@ -114,14 +97,31 @@ class SlaDowntimeChart extends ChartWidget
             'datasets' => [
                 [
                     'label' => 'Rata-rata Recovery (menit)',
-                    'data' => $combined->pluck('avg')->toArray(),
+                    'data' => array_column($areaRecovery, 'avg'),
                     'backgroundColor' => $colors,
                     'borderColor' => $borders,
                     'borderWidth' => 1,
                     'borderRadius' => 6,
                 ],
             ],
-            'labels' => $combined->pluck('label')->toArray(),
+            'labels' => array_column($areaRecovery, 'name'),
+        ];
+    }
+
+    private function emptyDataset(string $msg): array
+    {
+        return [
+            'datasets' => [
+                [
+                    'label' => 'Rata-rata Recovery (menit)',
+                    'data' => [0],
+                    'backgroundColor' => ['rgba(100,100,100,0.3)'],
+                    'borderColor' => ['rgba(100,100,100,0.5)'],
+                    'borderWidth' => 1,
+                    'borderRadius' => 6,
+                ],
+            ],
+            'labels' => [$msg],
         ];
     }
 
