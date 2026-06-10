@@ -74,6 +74,22 @@ class SlaDowntimeChart extends ChartWidget
             $avgRecoveryMinutes[] = $avg;
         }
 
+        if (empty($labels)) {
+            return [
+                'datasets' => [
+                    [
+                        'label' => 'Rata-rata Recovery (menit)',
+                        'data' => [0],
+                        'backgroundColor' => ['rgba(100,100,100,0.3)'],
+                        'borderColor' => ['rgba(100,100,100,0.5)'],
+                        'borderWidth' => 1,
+                        'borderRadius' => 6,
+                    ],
+                ],
+                'labels' => ['Belum ada data recovery'],
+            ];
+        }
+
         // Sort by avg recovery (worst first)
         $combined = collect($labels)->map(fn ($label, $i) => [
             'label' => $label,

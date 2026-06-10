@@ -31,10 +31,19 @@ class GangguanPerAreaBarChart extends ChartWidget
             ->limit(5)
             ->get();
 
-        if ($data->isEmpty()) {
+        if ($data->isEmpty() || $data->sum('total_gangguan') == 0) {
             return [
-                'datasets' => [],
-                'labels' => [],
+                'datasets' => [
+                    [
+                        'label' => 'Total Gangguan',
+                        'data' => [0],
+                        'backgroundColor' => ['rgba(100,100,100,0.3)'],
+                        'borderColor' => ['rgba(100,100,100,0.5)'],
+                        'borderWidth' => 1,
+                        'borderRadius' => 6,
+                    ],
+                ],
+                'labels' => ['Belum ada data gangguan'],
             ];
         }
 
