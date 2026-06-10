@@ -1,5 +1,5 @@
 # Nixpacks Configuration for Skynet Customer Health
-# Updated: Node 22 for Vite 7+, supervisor via pip --break-system-packages
+# Node 22 for Vite 7+, supervisor via nixpkgs
 
 [phases.setup]
 nixPkgs = [
@@ -23,16 +23,14 @@ nixPkgs = [
     "php84Extensions.gd",
     "php84Extensions.redis",
     "nodejs_22",
-    "python311",
-    "python311Packages.pip",
+    "python311Packages.supervisor",
     "iputils"
 ]
 
 [phases.install]
 cmds = [
     "composer install --no-dev --optimize-autoloader --no-interaction",
-    "npm install",
-    "pip install --break-system-packages supervisor"
+    "npm install"
 ]
 
 [phases.build]
@@ -41,4 +39,4 @@ cmds = [
 ]
 
 [start]
-cmd = "sh deploy.sh && supervisord -c supervisord.conf"
+cmd = "sh deploy.sh && /nix/var/nix/profiles/default/bin/supervisord -c supervisord.conf"
