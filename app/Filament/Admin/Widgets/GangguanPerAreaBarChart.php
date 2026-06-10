@@ -14,6 +14,7 @@ class GangguanPerAreaBarChart extends ChartWidget
     protected int | string | array $columnSpan = 'full';
     protected ?string $pollingInterval = '60s';
     protected ?string $maxHeight = '350px';
+    protected static bool $isLazy = false;
 
     protected function getData(): array
     {

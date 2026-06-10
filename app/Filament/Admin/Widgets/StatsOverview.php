@@ -8,6 +8,7 @@ use Filament\Widgets\StatsOverviewWidget\Stat;
 class StatsOverview extends StatsOverviewWidget
 {
     protected static ?int $sort = 1;
+    protected static bool $isLazy = false;
 
     protected ?string $pollingInterval = '5s';
 

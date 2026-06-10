@@ -9,7 +9,7 @@ use Livewire\Attributes\On;
 class ServerMonitoringBoard extends Widget
 {
     protected static ?int $sort = 2; // Show below AreaMonitoringBoard
-    
+    protected static bool $isLazy = false;
     protected int | string | array $columnSpan = 'full';
     
     protected ?string $pollingInterval = '30s';

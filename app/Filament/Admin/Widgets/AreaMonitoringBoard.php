@@ -10,6 +10,7 @@ class AreaMonitoringBoard extends Widget
     protected static ?int $sort = 2;
     protected int | string | array $columnSpan = 'full';
     protected ?string $pollingInterval = '30s';
+    protected static bool $isLazy = false;
 
     public $displayMode = 'table'; // card, table, chart
 

@@ -14,6 +14,7 @@ class SlaStatsOverview extends StatsOverviewWidget
 {
     protected static ?int $sort = 5;
     protected ?string $pollingInterval = '60s';
+    protected static bool $isLazy = false;
 
     protected function getStats(): array
     {
