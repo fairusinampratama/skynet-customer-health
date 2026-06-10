@@ -23,7 +23,11 @@ php artisan storage:link --force || true
 echo "📦 Running database migrations..."
 php artisan migrate --force --isolated
 
-# 3. Cache optimization
+# 3. Clear stale Filament component cache first
+echo "🧹 Clearing stale Filament cache..."
+php artisan filament:clear-cached-components 2>/dev/null || true
+
+# 4. Cache optimization
 echo "⚡ Optimizing application cache..."
 php artisan optimize
 
