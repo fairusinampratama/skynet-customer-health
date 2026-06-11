@@ -2,12 +2,17 @@
 
 namespace App\Filament\Admin\Widgets;
 
+use Carbon\CarbonImmutable;
+use Filament\Support\RawJs;
 use Filament\Widgets\ChartWidget;
+use Filament\Widgets\Concerns\InteractsWithPageFilters;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 class BackboneDowntimeChart extends ChartWidget
 {
+    use InteractsWithPageFilters;
+
     protected ?string $heading = 'Downtime Backbone';
 
     protected static ?int $sort = 91;
@@ -21,10 +26,19 @@ class BackboneDowntimeChart extends ChartWidget
     protected function getData(): array
     {
         $labels = ['IIX', 'JKTIX', 'TLN', 'Data Utama', 'THC', 'RBN'];
+        [$startDate, $endDate] = $this->getMonthRange();
 
-        $data = Cache::remember('widget_backbone_downtime_current', 60, function () {
+        $cacheKey = sprintf(
+            'widget_backbone_downtime_%s_%s',
+            $startDate->toDateString(),
+            $endDate->toDateString(),
+        );
+
+        $data = Cache::remember($cacheKey, 60, function () use ($startDate, $endDate) {
             return DB::table('servers')
-                ->where('servers.status', 'down')
+                ->join('server_health_checks', 'server_health_checks.server_id', '=', 'servers.id')
+                ->where('server_health_checks.status', 'down')
+                ->whereBetween('server_health_checks.checked_at', [$startDate, $endDate])
                 ->where(function ($query) {
                     $query->whereRaw('UPPER(servers.name) LIKE ?', ['%IIX%'])
                         ->orWhereRaw('UPPER(servers.name) LIKE ?', ['%JKTIX%'])
@@ -44,7 +58,7 @@ class BackboneDowntimeChart extends ChartWidget
                         WHEN UPPER(servers.name) LIKE '%RBN%' THEN 'RBN'
                     END as backbone
                 ")
-                ->selectRaw('SUM(GREATEST(TIMESTAMPDIFF(MINUTE, COALESCE(servers.last_seen, servers.updated_at, servers.created_at), NOW()), 1)) as downtime_minutes')
+                ->selectRaw('COUNT(server_health_checks.id) as downtime_minutes')
                 ->groupBy('backbone')
                 ->pluck('downtime_minutes', 'backbone');
         });
@@ -69,23 +83,71 @@ class BackboneDowntimeChart extends ChartWidget
         return 'bar';
     }
 
-    protected function getOptions(): array
+    protected function getOptions(): RawJs
     {
-        return [
-            'plugins' => [
-                'legend' => ['display' => true, 'position' => 'top'],
-                'tooltip' => ['mode' => 'index', 'intersect' => false],
-            ],
-            'scales' => [
-                'x' => [
-                    'grid' => ['display' => false],
-                    'title' => ['display' => true, 'text' => 'Backbone'],
-                ],
-                'y' => [
-                    'beginAtZero' => true,
-                    'title' => ['display' => true, 'text' => 'Minutes Downtime'],
-                ],
-            ],
-        ];
+        return RawJs::make(<<<'JS'
+        {
+            layout: {
+                padding: {
+                    top: 28
+                }
+            },
+            animation: {
+                onComplete: ({ chart }) => {
+                    const { ctx } = chart;
+                    ctx.save();
+                    ctx.font = '600 12px Inter, system-ui, sans-serif';
+                    ctx.fillStyle = '#374151';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'bottom';
+
+                    chart.data.datasets.forEach((dataset, datasetIndex) => {
+                        const meta = chart.getDatasetMeta(datasetIndex);
+
+                        meta.data.forEach((bar, index) => {
+                            const value = dataset.data[index] ?? 0;
+                            ctx.fillText(value + 'm', bar.x, bar.y - 6);
+                        });
+                    });
+
+                    ctx.restore();
+                }
+            },
+            plugins: {
+                legend: { display: true, position: 'top' },
+                tooltip: { mode: 'index', intersect: false },
+            },
+            scales: {
+                x: {
+                    grid: { display: false },
+                    title: { display: true, text: 'Backbone' },
+                },
+                y: {
+                    beginAtZero: true,
+                    title: { display: true, text: 'Minutes Downtime' },
+                },
+            },
+        }
+        JS);
+    }
+
+    /**
+     * @return array{0: CarbonImmutable, 1: CarbonImmutable}
+     */
+    private function getMonthRange(): array
+    {
+        $month = $this->pageFilters['month'] ?? now()->format('Y-m');
+
+        if (! is_string($month) || ! preg_match('/^\d{4}-\d{2}$/', $month)) {
+            $month = now()->format('Y-m');
+        }
+
+        try {
+            $startDate = CarbonImmutable::createFromFormat('Y-m-d H:i:s', "{$month}-01 00:00:00")->startOfMonth();
+        } catch (\Throwable) {
+            $startDate = CarbonImmutable::now()->startOfMonth();
+        }
+
+        return [$startDate, $startDate->endOfMonth()];
     }
 }
