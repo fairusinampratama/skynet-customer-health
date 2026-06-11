@@ -3,15 +3,17 @@
 namespace App\Filament\Admin\Widgets;
 
 use Carbon\CarbonImmutable;
+use Filament\Forms\Components\TextInput;
+use Filament\Schemas\Schema;
 use Filament\Support\RawJs;
 use Filament\Widgets\ChartWidget;
-use Filament\Widgets\Concerns\InteractsWithPageFilters;
+use Filament\Widgets\ChartWidget\Concerns\HasFiltersSchema;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 class BackboneDowntimeChart extends ChartWidget
 {
-    use InteractsWithPageFilters;
+    use HasFiltersSchema;
 
     protected ?string $heading = 'Downtime Backbone';
 
@@ -21,7 +23,24 @@ class BackboneDowntimeChart extends ChartWidget
 
     protected ?string $pollingInterval = '300s';
 
-    protected ?string $maxHeight = '360px';
+    protected ?string $maxHeight = '390px';
+
+    public function filtersSchema(Schema $schema): Schema
+    {
+        return $schema
+            ->components([
+                TextInput::make('month')
+                    ->label('Month')
+                    ->type('month')
+                    ->default(now()->format('Y-m')),
+            ]);
+    }
+
+    public function updatedFilters(): void
+    {
+        $this->cachedData = null;
+        $this->updateChartData();
+    }
 
     protected function getData(): array
     {
@@ -68,10 +87,26 @@ class BackboneDowntimeChart extends ChartWidget
                 [
                     'label' => 'Minutes Downtime',
                     'data' => collect($labels)->map(fn ($label) => (int) ($data[$label] ?? 0))->toArray(),
-                    'backgroundColor' => 'rgba(59, 130, 246, 0.82)',
-                    'borderColor' => 'rgb(37, 99, 235)',
+                    'backgroundColor' => [
+                        'rgba(37, 99, 235, 0.78)',
+                        'rgba(14, 165, 233, 0.78)',
+                        'rgba(20, 184, 166, 0.78)',
+                        'rgba(99, 102, 241, 0.78)',
+                        'rgba(168, 85, 247, 0.78)',
+                        'rgba(244, 63, 94, 0.78)',
+                    ],
+                    'borderColor' => [
+                        'rgb(29, 78, 216)',
+                        'rgb(2, 132, 199)',
+                        'rgb(13, 148, 136)',
+                        'rgb(79, 70, 229)',
+                        'rgb(147, 51, 234)',
+                        'rgb(225, 29, 72)',
+                    ],
                     'borderWidth' => 1,
-                    'borderRadius' => 4,
+                    'borderRadius' => 3,
+                    'barPercentage' => 0.62,
+                    'categoryPercentage' => 0.72,
                 ],
             ],
             'labels' => $labels,
@@ -88,16 +123,16 @@ class BackboneDowntimeChart extends ChartWidget
         return RawJs::make(<<<'JS'
         {
             layout: {
-                padding: {
-                    top: 28
-                }
+                padding: { top: 20, right: 12, bottom: 4, left: 4 }
             },
+            maintainAspectRatio: false,
             animation: {
+                duration: 350,
                 onComplete: ({ chart }) => {
                     const { ctx } = chart;
                     ctx.save();
-                    ctx.font = '600 12px Inter, system-ui, sans-serif';
-                    ctx.fillStyle = '#374151';
+                    ctx.font = '600 10px Inter, system-ui, sans-serif';
+                    ctx.fillStyle = '#334155';
                     ctx.textAlign = 'center';
                     ctx.textBaseline = 'bottom';
 
@@ -106,7 +141,11 @@ class BackboneDowntimeChart extends ChartWidget
 
                         meta.data.forEach((bar, index) => {
                             const value = dataset.data[index] ?? 0;
-                            ctx.fillText(value + 'm', bar.x, bar.y - 6);
+                            if (value <= 0) {
+                                return;
+                            }
+
+                            ctx.fillText(value.toLocaleString() + 'm', bar.x, Math.max(bar.y - 4, 12));
                         });
                     });
 
@@ -114,19 +153,54 @@ class BackboneDowntimeChart extends ChartWidget
                 }
             },
             plugins: {
-                legend: { display: true, position: 'top' },
-                tooltip: { mode: 'index', intersect: false },
+                legend: { display: false },
+                tooltip: {
+                    mode: 'index',
+                    intersect: false,
+                    displayColors: false,
+                    callbacks: {
+                        label: (context) => `${context.parsed.y.toLocaleString()} minutes downtime`
+                    }
+                },
             },
             scales: {
                 x: {
                     grid: { display: false },
-                    title: { display: true, text: 'Backbone' },
+                    ticks: {
+                        color: '#64748b',
+                        font: { size: 11, weight: '600' }
+                    },
+                    title: {
+                        display: true,
+                        text: 'Backbone',
+                        color: '#475569',
+                        font: { size: 11, weight: '600' }
+                    },
                 },
                 y: {
                     beginAtZero: true,
-                    title: { display: true, text: 'Minutes Downtime' },
+                    grace: '12%',
+                    grid: {
+                        color: 'rgba(148, 163, 184, 0.22)',
+                        drawBorder: false
+                    },
+                    ticks: {
+                        color: '#64748b',
+                        precision: 0,
+                        callback: (value) => value.toLocaleString()
+                    },
+                    title: {
+                        display: true,
+                        text: 'Minutes Downtime',
+                        color: '#475569',
+                        font: { size: 11, weight: '600' }
+                    },
                 },
             },
+            interaction: {
+                mode: 'nearest',
+                intersect: false
+            }
         }
         JS);
     }
@@ -136,7 +210,7 @@ class BackboneDowntimeChart extends ChartWidget
      */
     private function getMonthRange(): array
     {
-        $month = $this->pageFilters['month'] ?? now()->format('Y-m');
+        $month = $this->filters['month'] ?? now()->format('Y-m');
 
         if (! is_string($month) || ! preg_match('/^\d{4}-\d{2}$/', $month)) {
             $month = now()->format('Y-m');
