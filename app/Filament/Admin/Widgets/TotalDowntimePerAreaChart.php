@@ -71,17 +71,15 @@ class TotalDowntimePerAreaChart extends ChartWidget
         $data = Cache::remember($cacheKey, 60, function () use ($startDate, $endDate, $areaId) {
             return DB::table('areas')
                 ->when($areaId, fn ($query) => $query->where('areas.id', $areaId))
-                ->leftJoin('customers', function ($join) {
-                    $join->on('customers.area_id', '=', 'areas.id')
-                        ->where('customers.is_isolated', false);
-                })
-                ->leftJoin('health_checks', function ($join) use ($startDate, $endDate) {
-                    $join->on('health_checks.customer_id', '=', 'customers.id')
-                        ->where('health_checks.status', 'down')
-                        ->whereBetween('health_checks.checked_at', [$startDate, $endDate]);
+                ->leftJoin('health_check_daily_stats', function ($join) use ($startDate, $endDate) {
+                    $join->on('health_check_daily_stats.area_id', '=', 'areas.id')
+                        ->whereBetween('health_check_daily_stats.date', [
+                            $startDate->toDateString(),
+                            $endDate->toDateString(),
+                        ]);
                 })
                 ->select('areas.name')
-                ->selectRaw('COUNT(health_checks.id) as downtime_minutes')
+                ->selectRaw('COALESCE(SUM(health_check_daily_stats.down_count), 0) as downtime_minutes')
                 ->groupBy('areas.id', 'areas.name')
                 ->orderByDesc('downtime_minutes')
                 ->orderBy('areas.name')
