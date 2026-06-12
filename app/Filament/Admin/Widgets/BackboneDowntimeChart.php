@@ -19,9 +19,11 @@ class BackboneDowntimeChart extends ChartWidget
 
     protected static ?int $sort = 91;
 
+    protected static bool $isLazy = true;
+
     protected int | string | array $columnSpan = 'full';
 
-    protected ?string $pollingInterval = '300s';
+    protected ?string $pollingInterval = null;
 
     protected ?string $maxHeight = '390px';
 
@@ -53,33 +55,17 @@ class BackboneDowntimeChart extends ChartWidget
             $endDate->toDateString(),
         );
 
-        $data = Cache::remember($cacheKey, 60, function () use ($startDate, $endDate) {
-            return DB::table('servers')
-                ->join('server_health_checks', 'server_health_checks.server_id', '=', 'servers.id')
-                ->where('server_health_checks.status', 'down')
-                ->whereBetween('server_health_checks.checked_at', [$startDate, $endDate])
-                ->where(function ($query) {
-                    $query->whereRaw('UPPER(servers.name) LIKE ?', ['%IIX%'])
-                        ->orWhereRaw('UPPER(servers.name) LIKE ?', ['%JKTIX%'])
-                        ->orWhereRaw('UPPER(servers.name) LIKE ?', ['%TLN%'])
-                        ->orWhereRaw('UPPER(servers.name) LIKE ?', ['%DATAUTAMA%'])
-                        ->orWhereRaw('UPPER(servers.name) LIKE ?', ['%DATA UTAMA%'])
-                        ->orWhereRaw('UPPER(servers.name) LIKE ?', ['%THC%'])
-                        ->orWhereRaw('UPPER(servers.name) LIKE ?', ['%RBN%']);
-                })
-                ->selectRaw("
-                    CASE
-                        WHEN UPPER(servers.name) LIKE '%JKTIX%' THEN 'JKTIX'
-                        WHEN UPPER(servers.name) LIKE '%IIX%' THEN 'IIX'
-                        WHEN UPPER(servers.name) LIKE '%TLN%' THEN 'TLN'
-                        WHEN UPPER(servers.name) LIKE '%DATAUTAMA%' OR UPPER(servers.name) LIKE '%DATA UTAMA%' THEN 'Data Utama'
-                        WHEN UPPER(servers.name) LIKE '%THC%' THEN 'THC'
-                        WHEN UPPER(servers.name) LIKE '%RBN%' THEN 'RBN'
-                    END as backbone
-                ")
-                ->selectRaw('COUNT(server_health_checks.id) as downtime_minutes')
-                ->groupBy('backbone')
-                ->pluck('downtime_minutes', 'backbone');
+        $data = Cache::remember($cacheKey, 300, function () use ($startDate, $endDate) {
+            return DB::table('server_health_daily_stats')
+                ->whereBetween('date', [
+                    $startDate->toDateString(),
+                    $endDate->toDateString(),
+                ])
+                ->whereNotNull('backbone_name')
+                ->select('backbone_name')
+                ->selectRaw('SUM(down_count) as downtime_minutes')
+                ->groupBy('backbone_name')
+                ->pluck('downtime_minutes', 'backbone_name');
         });
 
         return [

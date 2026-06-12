@@ -21,9 +21,11 @@ class TotalDowntimePerAreaChart extends ChartWidget
 
     protected static ?int $sort = 90;
 
+    protected static bool $isLazy = true;
+
     protected int | string | array $columnSpan = 'full';
 
-    protected ?string $pollingInterval = '300s';
+    protected ?string $pollingInterval = null;
 
     protected ?string $maxHeight = '430px';
 
@@ -68,7 +70,7 @@ class TotalDowntimePerAreaChart extends ChartWidget
             $areaId ?: 'all',
         );
 
-        $data = Cache::remember($cacheKey, 60, function () use ($startDate, $endDate, $areaId) {
+        $data = Cache::remember($cacheKey, 300, function () use ($startDate, $endDate, $areaId) {
             return DB::table('areas')
                 ->when($areaId, fn ($query) => $query->where('areas.id', $areaId))
                 ->leftJoin('health_check_daily_stats', function ($join) use ($startDate, $endDate) {
@@ -83,6 +85,7 @@ class TotalDowntimePerAreaChart extends ChartWidget
                 ->groupBy('areas.id', 'areas.name')
                 ->orderByDesc('downtime_minutes')
                 ->orderBy('areas.name')
+                ->when(! $areaId, fn ($query) => $query->limit(10))
                 ->get();
         });
 

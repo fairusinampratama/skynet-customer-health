@@ -9,6 +9,7 @@ Artisan::command('inspire', function () {
 
 // Schedule a check every minute
 \Illuminate\Support\Facades\Schedule::command('health:check')->everyMinute()->withoutOverlapping(5);
+\Illuminate\Support\Facades\Schedule::command('stats:aggregate-server-health')->hourly()->withoutOverlapping(10);
 
 // Schedule reports every 2 hours from 08:00 to 00:00 (Midnight)
 $hours = ['08:00', '10:00', '12:00', '14:00', '16:00', '18:00', '20:00', '22:00', '00:00'];
