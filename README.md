@@ -19,6 +19,10 @@ Skynet Customer Health provides Network Operations Centers (NOC) and Support tea
     - Optimized Indexes: efficient querying for large datasets (~1,600+ customers).
 - **Reporting**: Automated WhatsApp integration for daily status reports.
 
+## Data Handling
+
+Real PPP secret exports, router address lists, monitoring exports, customer datasets, logs, and production `.env` files are intentionally excluded from this repository. Use anonymized fixtures for public examples and keep operational imports in approved private storage only.
+
 ## 🛠 Tech Stack
 
 - **Framework**: [Laravel](https://laravel.com)

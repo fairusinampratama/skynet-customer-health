@@ -11,19 +11,19 @@ class RouterSeeder extends Seeder
     {
         $routers = [
             [
-                'name' => 'Skynet-Metro',
-                'ip_address' => '172.22.254.1',
+                'name' => 'Demo Core Router',
+                'ip_address' => '192.0.2.10',
                 'port' => 8728,
-                'username' => 'API-AAM',
-                'password' => 'aamprogrammer2026',
+                'username' => 'demo-router-user',
+                'password' => 'replace-with-private-secret',
                 'is_active' => true,
             ],
             [
-                'name' => 'Skynet-PPPoE Randuagung',
-                'ip_address' => '10.181.40.2',
+                'name' => 'Demo PPPoE Router',
+                'ip_address' => '192.0.2.11',
                 'port' => 8728,
-                'username' => 'API-AAM',
-                'password' => 'aamprogrammer2026',
+                'username' => 'demo-router-user',
+                'password' => 'replace-with-private-secret',
                 'is_active' => true,
             ],
         ];

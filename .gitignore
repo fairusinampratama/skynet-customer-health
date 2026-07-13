@@ -1,4 +1,10 @@
 *.log
+*.csv
+*.xls
+*.xlsx
+*.sql
+*.sqlite
+*.db
 .DS_Store
 .env
 .env.backup
@@ -21,6 +27,8 @@
 /storage/*.key
 /storage/pail
 /vendor
+/database/migrations/ppp_secret/
+/database/migrations/server/
 Homestead.json
 Homestead.yaml
 Thumbs.db
