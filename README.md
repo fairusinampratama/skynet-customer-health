@@ -1,14 +1,12 @@
 # Skynet Customer Health Monitor
 
-A real-time network monitoring dashboard designed for ISPs to track customer and server connectivity health.
+Skynet Customer Health Monitor is a real-time network monitoring dashboard for ISP operations teams to track customer and server connectivity health.
 
-![Dashboard Preview](https://github.com/laravel/framework/workflows/tests/badge.svg) *Note: Replace with actual screenshot*
-
-## 🚀 Overview
+## Overview
 
 Skynet Customer Health provides Network Operations Centers (NOC) and Support teams with instant visibility into network performance. It monitors thousands of customers and critical servers in real-time, offering both a detailed Admin Panel and a hands-free TV Dashboard for wall-mounted displays.
 
-## ✨ Key Features
+## Key Features
 
 - **Real-Time Monitoring**: Checks customer connection status, latency, and packet loss every minute.
 - **TV Dashboard**: Dedicated, auto-scrolling views (`/tv/areas`, `/tv/servers`) for clear visibility in the NOC.
@@ -23,19 +21,19 @@ Skynet Customer Health provides Network Operations Centers (NOC) and Support tea
 
 Real PPP secret exports, router address lists, monitoring exports, customer datasets, logs, and production `.env` files are intentionally excluded from this repository. Use anonymized fixtures for public examples and keep operational imports in approved private storage only.
 
-## 🛠 Tech Stack
+## Tech Stack
 
 - **Framework**: [Laravel](https://laravel.com)
 - **Admin Panel**: [FilamentPHP](https://filamentphp.com)
 - **Database**: MySQL / MariaDB
 - **Frontend**: Blade & TailwindCSS (Alpine.js for interactive widgets)
-- **Tools**: `ripgrep` (for internal ops tools), Artisan Scheduler
+- **Tools**: Laravel Scheduler, queue workers, and command-line maintenance tools
 
-## ⚙️ Installation
+## Installation
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/your-org/skynet-customer-health.git
+   git clone https://github.com/fairusinampratama/skynet-customer-health.git
    cd skynet-customer-health
    ```
 
@@ -50,7 +48,7 @@ Real PPP secret exports, router address lists, monitoring exports, customer data
    cp .env.example .env
    php artisan key:generate
    ```
-   *Configure your database credentials in `.env`*
+   Configure local database credentials in `.env`. Do not use production credentials in local demos.
 
 4. **Database Migration**
    ```bash
@@ -63,7 +61,7 @@ Real PPP secret exports, router address lists, monitoring exports, customer data
    ```
    *Visit `http://localhost:8000/admin`*
 
-## ⏰ Scheduler & Workers
+## Scheduler & Workers
 
 For the monitoring Checks and Auto-Pruning to work, the Laravel Scheduler must be running:
 
@@ -80,7 +78,7 @@ php artisan schedule:work
 - `model:prune` (Daily): Deletes health logs older than 7 days.
 - `app:send-daily-error-report` (Daily 08:00): WhatsApp report.
 
-## 📺 TV Dashboard Routes
+## TV Dashboard Routes
 
 - **Area Health**: `/tv/areas`
 - **Server Health**: `/tv/servers`
